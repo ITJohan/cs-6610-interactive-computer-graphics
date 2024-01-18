@@ -1,3 +1,4 @@
+// Initializations
 if (!navigator.gpu) {
   throw new Error('WebGPU not supported.');
 }
@@ -18,7 +19,8 @@ context.configure({
   format: preferredFormat
 })
 
-const vertices = new Float32Array([
+// Vertex buffer setup
+const vertexArray = new Float32Array([
   -1, -1,
   1, -1,
   1, 1,
@@ -29,11 +31,11 @@ const vertices = new Float32Array([
 
 const vertexBuffer = device.createBuffer({
   label: 'vertex buffer',
-  size: vertices.byteLength,
+  size: vertexArray.byteLength,
   usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
 })
 
-device.queue.writeBuffer(vertexBuffer, 0, vertices)
+device.queue.writeBuffer(vertexBuffer, 0, vertexArray)
 
 const vertexBufferLayout = {
   arrayStride: 8,
@@ -44,9 +46,20 @@ const vertexBufferLayout = {
   }]
 }
 
+// Color uniform buffer setup
+const colorArray = new Float32Array([1, 0, 0, 1]);
+const colorBuffer = device.createBuffer({
+  label: 'color buffer',
+  size: colorArray.byteLength,
+  usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+})
+device.queue.writeBuffer(colorBuffer, 0, colorArray)
+
+// Shader setup
 const shaderModule = device.createShaderModule({
   label: 'shader module',
   code: `
+    @group(0) @binding(0) var<uniform> color: vec4f;
     @vertex
     fn vertexMain(@location(0) pos: vec2f) -> @builtin(position) vec4f {
       return vec4f(pos, 0, 1);
@@ -54,11 +67,12 @@ const shaderModule = device.createShaderModule({
 
     @fragment
     fn fragmentMain() -> @location(0) vec4f {
-      return vec4f(0, 1, 0, 1);
+      return color;
     }
   `
 })
 
+// Pipeline setup
 const pipeline = device.createRenderPipeline({
   label: 'pipeline',
   layout: 'auto',
@@ -76,19 +90,45 @@ const pipeline = device.createRenderPipeline({
   }
 })
 
-const encoder = device.createCommandEncoder()
-const pass = encoder.beginRenderPass({
-  colorAttachments: [{
-    view: context.getCurrentTexture().createView(),
-    loadOp: 'clear',
-    clearValue: [0, 0, 0, 0],
-    storeOp: 'store'
+// Bind group
+const bindGroup = device.createBindGroup({
+  label: 'bind group',
+  layout: pipeline.getBindGroupLayout(0),
+  entries: [{
+    binding: 0,
+    resource: { buffer: colorBuffer }
   }]
 })
-pass.setPipeline(pipeline)
-pass.setVertexBuffer(0, vertexBuffer)
-pass.draw(vertices.length / 2)
-pass.end()
 
-const commandBuffer = encoder.finish()
-device.queue.submit([commandBuffer])
+let count = 0;
+
+function render() {
+  // Update color buffer
+  const red = Math.sin(count)
+  count += 0.01;
+  const newColorArray = new Float32Array([red, 0, 0, 1])
+  device.queue.writeBuffer(colorBuffer, 0, newColorArray)
+
+  // Encode commands and render
+  const encoder = device.createCommandEncoder()
+  const pass = encoder.beginRenderPass({
+    colorAttachments: [{
+      view: context.getCurrentTexture().createView(),
+      loadOp: 'clear',
+      clearValue: [0, 0, 0, 0],
+      storeOp: 'store'
+    }]
+  })
+  pass.setPipeline(pipeline)
+  pass.setVertexBuffer(0, vertexBuffer)
+  pass.setBindGroup(0, bindGroup)
+  pass.draw(vertexArray.length / 2)
+  pass.end()
+
+  const commandBuffer = encoder.finish()
+  device.queue.submit([commandBuffer])
+
+  requestAnimationFrame(render)
+}
+
+render();
