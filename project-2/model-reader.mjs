@@ -10,7 +10,10 @@ class ModelInput extends HTMLElement {
     super();
     this.attachShadow({ mode: 'open' });
     this.shadowRoot.appendChild(template.content.cloneNode(true));
+    this.innerInput = this.shadowRoot.querySelector('input');
+  }
 
+  connectedCallback() {
     const fileReader = new FileReader();
     fileReader.addEventListener('load', (e) => {
       const text = e.target.result;
@@ -119,7 +122,6 @@ class ModelInput extends HTMLElement {
       );
     });
 
-    this.innerInput = this.shadowRoot.querySelector('input');
     this.innerInput.addEventListener('change', (event) => {
       fileReader.readAsText(event.target.files[0]);
     });
