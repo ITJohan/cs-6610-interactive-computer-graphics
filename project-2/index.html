@@ -4,15 +4,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script type="module" src="/script.js"></script>
-  <script type="module" src="/obj-reader.mjs"></script>
+  <script type="module" src="/webgpu-canvas.js"></script>
+  <script type="module" src="/model-reader.mjs"></script>
   <title>Project 2</title>
 </head>
 
 <body>
-  <canvas width="512" height="512"></canvas>
-  <label for="model">Choose a model:</label>
-  <input type="file" id="model" name="model" accept=".obj" />
+  <webgpu-canvas></webgpu-canvas>
+  <label for="model-input">Choose a model:</label>
+  <model-input id="model-input" name="model-input"></model-input>
+  <script type="module">
+    const sectionEl = document.querySelector('model-input')
+    sectionEl.addEventListener('modelparsed', (event) => {
+      console.log(event.detail)
+    })
+  </script>
 </body>
 
 </html>
