@@ -109,7 +109,7 @@ class ModelViewer extends HTMLElement {
       }
     );
 
-    console.log(parsedModel);
+    return parsedModel;
   }
 
   constructor() {
@@ -213,7 +213,7 @@ class ModelViewer extends HTMLElement {
     device.queue.submit([commandBuffer]);
   }
 
-  attributeChangedCallback(name, prev, next) {
+  async attributeChangedCallback(name, prev, next) {
     if (prev === next) {
       return;
     }
@@ -222,7 +222,8 @@ class ModelViewer extends HTMLElement {
       case 'src':
         this.setAttribute('src', next);
         this[name] = next;
-        this.#parseModel(next);
+        const model = await this.#parseModel(next);
+        console.log(model);
     }
   }
 }
