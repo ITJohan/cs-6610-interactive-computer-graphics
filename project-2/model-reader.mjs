@@ -130,7 +130,11 @@ class ModelInput extends HTMLElement {
       return;
     }
 
-    this.innerInput[name] = next;
+    switch (name) {
+      case 'id':
+      case 'name':
+        this.innerInput[name] = name;
+    }
   }
 }
 
