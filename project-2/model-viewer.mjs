@@ -1,3 +1,6 @@
+// @ts-check
+/// <reference path="webgpu.d.ts" />
+
 /**
  * @typedef {{
  *  x: number;
@@ -22,11 +25,12 @@ template.innerHTML = `
 
 class ModelViewer extends HTMLElement {
   static observedAttributes = ['src'];
-  #model;
+  /** @type {HTMLCanvasElement} */ #innerCanvas;
+  /** @type {Model} */ #model;
 
   /**
    * @param {string} src
-   * @returns {Model}
+   * @returns {Promise<Model>}
    */
   async #parseModel(src) {
     const result = await fetch(src);
@@ -123,12 +127,12 @@ class ModelViewer extends HTMLElement {
 
         return result;
       },
-      {
+      /** @type {Model} */ ({
         vertices: [],
         vertexNormals: [],
         textureCoordinates: [],
         triangles: [],
-      }
+      })
     );
 
     return parsedModel;
@@ -136,9 +140,11 @@ class ModelViewer extends HTMLElement {
 
   constructor() {
     super();
-    this.attachShadow({ mode: 'open' });
-    this.shadowRoot.appendChild(template.content.cloneNode(true));
-    this.innerCanvas = this.shadowRoot.querySelector('canvas');
+    const shadowRoot = this.attachShadow({ mode: 'open' });
+    shadowRoot.appendChild(template.content.cloneNode(true));
+    this.#innerCanvas = /** @type {HTMLCanvasElement} */ (
+      shadowRoot.querySelector('canvas')
+    );
   }
 
   async connectedCallback() {
@@ -154,7 +160,14 @@ class ModelViewer extends HTMLElement {
 
     const device = await adapter.requestDevice();
 
-    const context = this.innerCanvas.getContext('webgpu');
+    const context = /** @type {GPUCanvasContext} */ (
+      /** @type {unknown} */ (this.#innerCanvas.getContext('webgpu'))
+    );
+
+    if (!context) {
+      throw new Error('Could not get webgpu context.');
+    }
+
     const preferredFormat = navigator.gpu.getPreferredCanvasFormat();
     context.configure({
       device,
@@ -170,7 +183,7 @@ class ModelViewer extends HTMLElement {
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
     device.queue.writeBuffer(vertexBuffer, 0, vertexArray);
-    const vertexBufferLayout = {
+    /** @type {GPUVertexBufferLayout} */ const vertexBufferLayout = {
       arrayStride: 8,
       attributes: [
         {
