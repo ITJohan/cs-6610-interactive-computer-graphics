@@ -11,7 +11,7 @@
 
 /**
  * @typedef {{
- *  vertices: Vertex[];
+ *  vertices: number[];
  *  vertexNormals: Vertex[];
  *  textureCoordinates: Vertex[];
  *  triangles: {vertex1: Vertex; vertex2: Vertex; vertex3: Vertex; vertex4: Vertex}[];
@@ -46,11 +46,9 @@ class ModelViewer extends HTMLElement {
             ...result,
             vertices: [
               ...result.vertices,
-              {
-                x: Number(parsedLine[2]),
-                y: Number(parsedLine[3]),
-                z: Number(parsedLine[4]),
-              },
+              Number(parsedLine[2]),
+              Number(parsedLine[3]),
+              Number(parsedLine[4]),
             ],
           };
         }
@@ -174,9 +172,7 @@ class ModelViewer extends HTMLElement {
       format: preferredFormat,
     });
 
-    const vertexArray = new Float32Array([
-      -1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1,
-    ]);
+    const vertexArray = new Float32Array(this.#model.vertices);
     const vertexBuffer = device.createBuffer({
       label: 'vertex buffer',
       size: vertexArray.byteLength,
@@ -184,10 +180,10 @@ class ModelViewer extends HTMLElement {
     });
     device.queue.writeBuffer(vertexBuffer, 0, vertexArray);
     /** @type {GPUVertexBufferLayout} */ const vertexBufferLayout = {
-      arrayStride: 8,
+      arrayStride: 3 * 4,
       attributes: [
         {
-          format: 'float32x2',
+          format: 'float32x3',
           offset: 0,
           shaderLocation: 0,
         },
@@ -198,13 +194,13 @@ class ModelViewer extends HTMLElement {
       label: 'shader module',
       code: `
         @vertex
-        fn vertexMain(@location(0) pos: vec2f) -> @builtin(position) vec4f {
-          return vec4f(pos, 0, 1);
+        fn vertexMain(@location(0) pos: vec3f) -> @builtin(position) vec4f {
+          return vec4f(pos * 0.05, 1);
         }
 
         @fragment
         fn fragmentMain() -> @location(0) vec4f {
-          return vec4f(0, 1, 0, 1);
+          return vec4f(1, 1, 1, 1);
         }
       `,
     });
@@ -226,10 +222,14 @@ class ModelViewer extends HTMLElement {
           },
         ],
       },
+      primitive: {
+        topology: 'point-list',
+      },
     });
 
     const encoder = device.createCommandEncoder();
     const pass = encoder.beginRenderPass({
+      label: 'render pass',
       colorAttachments: [
         {
           view: context.getCurrentTexture().createView(),
@@ -241,7 +241,7 @@ class ModelViewer extends HTMLElement {
     });
     pass.setPipeline(pipeline);
     pass.setVertexBuffer(0, vertexBuffer);
-    pass.draw(vertexArray.length / 2);
+    pass.draw(vertexArray.length / 3);
     pass.end();
 
     const commandBuffer = encoder.finish();
@@ -257,8 +257,7 @@ class ModelViewer extends HTMLElement {
       case 'src':
         this.setAttribute('src', next);
         this[name] = next;
-        const model = await this.#parseModel(next);
-        console.log(model);
+        this.#model = await this.#parseModel(next);
     }
   }
 }
