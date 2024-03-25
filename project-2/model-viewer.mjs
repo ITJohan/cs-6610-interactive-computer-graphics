@@ -159,7 +159,8 @@ class ModelViewer extends HTMLElement {
     const device = await adapter.requestDevice();
 
     const context = /** @type {GPUCanvasContext} */ (
-      /** @type {unknown} */ (this.#innerCanvas.getContext('webgpu'))
+      /** @type {unknown} */
+      (this.#innerCanvas.getContext('webgpu'))
     );
 
     if (!context) {
@@ -172,6 +173,7 @@ class ModelViewer extends HTMLElement {
       format: preferredFormat,
     });
 
+    // Set up vertex buffer
     const vertexArray = new Float32Array(this.#model.vertices);
     const vertexBuffer = device.createBuffer({
       label: 'vertex buffer',
@@ -193,9 +195,11 @@ class ModelViewer extends HTMLElement {
     const shaderModule = device.createShaderModule({
       label: 'shader module',
       code: `
+        @group(0) @binding(0) var<uniform> mvp : mat4x4<f32>;
+
         @vertex
         fn vertexMain(@location(0) pos: vec3f) -> @builtin(position) vec4f {
-          return vec4f(pos * 0.05, 1);
+          return mvp * vec4f(pos, 1);
         }
 
         @fragment
@@ -227,6 +231,28 @@ class ModelViewer extends HTMLElement {
       },
     });
 
+    // Set up model-view-projection uniform
+    const mvpArray = new Float32Array([
+      0.05, 0, 0, 0, 0, 0.05, 0, 0, 0, 0, 0.05, 0, 0, 0, 0, 1,
+    ]);
+    const mvpBuffer = device.createBuffer({
+      label: 'mvp buffer',
+      size: mvpArray.byteLength,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    device.queue.writeBuffer(mvpBuffer, 0, mvpArray);
+
+    const bindGroup = device.createBindGroup({
+      label: 'mvp bind group',
+      layout: pipeline.getBindGroupLayout(0),
+      entries: [
+        {
+          binding: 0,
+          resource: { buffer: mvpBuffer },
+        },
+      ],
+    });
+
     const encoder = device.createCommandEncoder();
     const pass = encoder.beginRenderPass({
       label: 'render pass',
@@ -241,6 +267,7 @@ class ModelViewer extends HTMLElement {
     });
     pass.setPipeline(pipeline);
     pass.setVertexBuffer(0, vertexBuffer);
+    pass.setBindGroup(0, bindGroup);
     pass.draw(vertexArray.length / 3);
     pass.end();
 

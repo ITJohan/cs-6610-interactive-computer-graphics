@@ -2766,6 +2766,7 @@ interface GPUShaderStage {
   readonly FRAGMENT: GPUFlagsConstant;
   readonly COMPUTE: GPUFlagsConstant;
 }
+declare var GPUShaderStage: GPUShaderStage;
 
 interface GPUTextureUsage {
   readonly COPY_SRC: GPUFlagsConstant;
