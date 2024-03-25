@@ -1,3 +1,20 @@
+/**
+ * @typedef {{
+ *  x: number;
+ *  y: number;
+ *  z: number;
+ * }} Vertex
+ */
+
+/**
+ * @typedef {{
+ *  vertices: Vertex[];
+ *  vertexNormals: Vertex[];
+ *  textureCoordinates: Vertex[];
+ *  triangles: {vertex1: Vertex; vertex2: Vertex; vertex3: Vertex; vertex4: Vertex}[];
+ * }} Model
+ */
+
 const template = document.createElement('template');
 template.innerHTML = `
   <canvas width="512" height="512"></canvas>
@@ -5,7 +22,12 @@ template.innerHTML = `
 
 class ModelViewer extends HTMLElement {
   static observedAttributes = ['src'];
+  #model;
 
+  /**
+   * @param {string} src
+   * @returns {Model}
+   */
   async #parseModel(src) {
     const result = await fetch(src);
     const text = await result.text();
