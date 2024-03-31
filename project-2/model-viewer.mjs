@@ -11,12 +11,13 @@ template.innerHTML = `
 
 class ModelViewer extends HTMLElement {
   static observedAttributes = ['src'];
-  /** @type {GPUDevice} */ device;
-  /** @type {GPUCanvasContext} */ context;
-  /** @type {GPURenderPipeline} */ pipeline;
-  /** @type {GPUBuffer} */ vertexBuffer;
-  /** @type {Float32Array} */ vertexArray;
-  /** @type {GPUBindGroup} */ bindGroup;
+
+  /** @type {GPUDevice} */ #device;
+  /** @type {GPUCanvasContext} */ #context;
+  /** @type {GPURenderPipeline} */ #pipeline;
+  /** @type {GPUBuffer} */ #vertexBuffer;
+  /** @type {Float32Array} */ #vertexArray;
+  /** @type {GPUBindGroup} */ #bindGroup;
   /** @type {HTMLCanvasElement} */ #innerCanvas;
   /** @type {Model} */ #model;
 
@@ -39,31 +40,31 @@ class ModelViewer extends HTMLElement {
       throw new Error('No adapter available.');
     }
 
-    this.device = await adapter.requestDevice();
+    this.#device = await adapter.requestDevice();
 
-    this.context = /** @type {GPUCanvasContext} */ (
+    this.#context = /** @type {GPUCanvasContext} */ (
       /** @type {unknown} */
       (this.#innerCanvas.getContext('webgpu'))
     );
 
-    if (!this.context) {
+    if (!this.#context) {
       throw new Error('Could not get webgpu context.');
     }
 
     const preferredFormat = navigator.gpu.getPreferredCanvasFormat();
-    this.context.configure({
-      device: this.device,
+    this.#context.configure({
+      device: this.#device,
       format: preferredFormat,
     });
 
     // Set up vertex buffer
-    this.vertexArray = new Float32Array(this.#model.vertices);
-    this.vertexBuffer = this.device.createBuffer({
+    this.#vertexArray = new Float32Array(this.#model.vertices);
+    this.#vertexBuffer = this.#device.createBuffer({
       label: 'vertex buffer',
-      size: this.vertexArray.byteLength,
+      size: this.#vertexArray.byteLength,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
-    this.device.queue.writeBuffer(this.vertexBuffer, 0, this.vertexArray);
+    this.#device.queue.writeBuffer(this.#vertexBuffer, 0, this.#vertexArray);
     /** @type {GPUVertexBufferLayout} */ const vertexBufferLayout = {
       arrayStride: 3 * 4,
       attributes: [
@@ -75,7 +76,7 @@ class ModelViewer extends HTMLElement {
       ],
     };
 
-    const shaderModule = this.device.createShaderModule({
+    const shaderModule = this.#device.createShaderModule({
       label: 'shader module',
       code: `
         @group(0) @binding(0) var<uniform> mvp : mat4x4<f32>;
@@ -92,7 +93,7 @@ class ModelViewer extends HTMLElement {
       `,
     });
 
-    this.pipeline = this.device.createRenderPipeline({
+    this.#pipeline = this.#device.createRenderPipeline({
       label: 'render pipeline',
       layout: 'auto',
       vertex: {
@@ -125,16 +126,16 @@ class ModelViewer extends HTMLElement {
     const modelViewProjectionArray = new Float32Array(modelViewProjectionMatrix.toArray());
     const mvpBufferSize = 16 * 4;
 
-    const mvpBuffer = this.device.createBuffer({
+    const mvpBuffer = this.#device.createBuffer({
       label: 'mvp buffer',
       size: mvpBufferSize,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
-    this.device.queue.writeBuffer(mvpBuffer, 0, modelViewProjectionArray);
+    this.#device.queue.writeBuffer(mvpBuffer, 0, modelViewProjectionArray);
 
-    this.bindGroup = this.device.createBindGroup({
+    this.#bindGroup = this.#device.createBindGroup({
       label: 'mvp bind group',
-      layout: this.pipeline.getBindGroupLayout(0),
+      layout: this.#pipeline.getBindGroupLayout(0),
       entries: [
         {
           binding: 0,
@@ -160,26 +161,26 @@ class ModelViewer extends HTMLElement {
   }
 
   render() {
-    const encoder = this.device.createCommandEncoder();
+    const encoder = this.#device.createCommandEncoder();
     const pass = encoder.beginRenderPass({
       label: 'render pass',
       colorAttachments: [
         {
-          view: this.context.getCurrentTexture().createView(),
+          view: this.#context.getCurrentTexture().createView(),
           loadOp: 'clear',
           clearValue: [0, 0, 0, 0],
           storeOp: 'store',
         },
       ],
     });
-    pass.setPipeline(this.pipeline);
-    pass.setVertexBuffer(0, this.vertexBuffer);
-    pass.setBindGroup(0, this.bindGroup);
-    pass.draw(this.vertexArray.length / 3);
+    pass.setPipeline(this.#pipeline);
+    pass.setVertexBuffer(0, this.#vertexBuffer);
+    pass.setBindGroup(0, this.#bindGroup);
+    pass.draw(this.#vertexArray.length / 3);
     pass.end();
 
     const commandBuffer = encoder.finish();
-    this.device.queue.submit([commandBuffer]);
+    this.#device.queue.submit([commandBuffer]);
   }
 }
 
