@@ -1,14 +1,10 @@
 // @ts-check
 
 export default class Model {
-  /** @type {number[]} */
-  vertices;
-  /** @type {number[]} */
-  vertexNormals;
-  /** @type {number[]} */
-  textureCoordinates;
-  /** @type {[number, number, number][]} */
-  triangles;
+  /** @type {number[]} */ vertices;
+  /** @type {number[]} */ vertexNormals;
+  /** @type {number[]} */ textureCoordinates;
+  /** @type {[number, number, number][]} */ triangles;
 
   constructor() {
     this.vertices = [];

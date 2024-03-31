@@ -4,14 +4,6 @@
 import Mat4 from './mat4.mjs';
 import Model from './model.mjs';
 
-/**
- * @typedef {{
- *  x: number;
- *  y: number;
- *  z: number;
- * }} Vertex
- */
-
 const template = document.createElement('template');
 template.innerHTML = `
   <canvas width="512" height="512"></canvas>
@@ -19,6 +11,12 @@ template.innerHTML = `
 
 class ModelViewer extends HTMLElement {
   static observedAttributes = ['src'];
+  /** @type {GPUDevice} */ device;
+  /** @type {GPUCanvasContext} */ context;
+  /** @type {GPURenderPipeline} */ pipeline;
+  /** @type {GPUBuffer} */ vertexBuffer;
+  /** @type {Float32Array} */ vertexArray;
+  /** @type {GPUBindGroup} */ bindGroup;
   /** @type {HTMLCanvasElement} */ #innerCanvas;
   /** @type {Model} */ #model;
 
@@ -41,31 +39,31 @@ class ModelViewer extends HTMLElement {
       throw new Error('No adapter available.');
     }
 
-    const device = await adapter.requestDevice();
+    this.device = await adapter.requestDevice();
 
-    const context = /** @type {GPUCanvasContext} */ (
+    this.context = /** @type {GPUCanvasContext} */ (
       /** @type {unknown} */
       (this.#innerCanvas.getContext('webgpu'))
     );
 
-    if (!context) {
+    if (!this.context) {
       throw new Error('Could not get webgpu context.');
     }
 
     const preferredFormat = navigator.gpu.getPreferredCanvasFormat();
-    context.configure({
-      device,
+    this.context.configure({
+      device: this.device,
       format: preferredFormat,
     });
 
     // Set up vertex buffer
-    const vertexArray = new Float32Array(this.#model.vertices);
-    const vertexBuffer = device.createBuffer({
+    this.vertexArray = new Float32Array(this.#model.vertices);
+    this.vertexBuffer = this.device.createBuffer({
       label: 'vertex buffer',
-      size: vertexArray.byteLength,
+      size: this.vertexArray.byteLength,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
-    device.queue.writeBuffer(vertexBuffer, 0, vertexArray);
+    this.device.queue.writeBuffer(this.vertexBuffer, 0, this.vertexArray);
     /** @type {GPUVertexBufferLayout} */ const vertexBufferLayout = {
       arrayStride: 3 * 4,
       attributes: [
@@ -77,7 +75,7 @@ class ModelViewer extends HTMLElement {
       ],
     };
 
-    const shaderModule = device.createShaderModule({
+    const shaderModule = this.device.createShaderModule({
       label: 'shader module',
       code: `
         @group(0) @binding(0) var<uniform> mvp : mat4x4<f32>;
@@ -94,7 +92,7 @@ class ModelViewer extends HTMLElement {
       `,
     });
 
-    const pipeline = device.createRenderPipeline({
+    this.pipeline = this.device.createRenderPipeline({
       label: 'render pipeline',
       layout: 'auto',
       vertex: {
@@ -127,16 +125,16 @@ class ModelViewer extends HTMLElement {
     const modelViewProjectionArray = new Float32Array(modelViewProjectionMatrix.toArray());
     const mvpBufferSize = 16 * 4;
 
-    const mvpBuffer = device.createBuffer({
+    const mvpBuffer = this.device.createBuffer({
       label: 'mvp buffer',
       size: mvpBufferSize,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
-    device.queue.writeBuffer(mvpBuffer, 0, modelViewProjectionArray);
+    this.device.queue.writeBuffer(mvpBuffer, 0, modelViewProjectionArray);
 
-    const bindGroup = device.createBindGroup({
+    this.bindGroup = this.device.createBindGroup({
       label: 'mvp bind group',
-      layout: pipeline.getBindGroupLayout(0),
+      layout: this.pipeline.getBindGroupLayout(0),
       entries: [
         {
           binding: 0,
@@ -145,26 +143,7 @@ class ModelViewer extends HTMLElement {
       ],
     });
 
-    const encoder = device.createCommandEncoder();
-    const pass = encoder.beginRenderPass({
-      label: 'render pass',
-      colorAttachments: [
-        {
-          view: context.getCurrentTexture().createView(),
-          loadOp: 'clear',
-          clearValue: [0, 0, 0, 0],
-          storeOp: 'store',
-        },
-      ],
-    });
-    pass.setPipeline(pipeline);
-    pass.setVertexBuffer(0, vertexBuffer);
-    pass.setBindGroup(0, bindGroup);
-    pass.draw(vertexArray.length / 3);
-    pass.end();
-
-    const commandBuffer = encoder.finish();
-    device.queue.submit([commandBuffer]);
+    this.render();
   }
 
   async attributeChangedCallback(name, prev, next) {
@@ -178,6 +157,29 @@ class ModelViewer extends HTMLElement {
         this[name] = next;
         await this.#model.load(next);
     }
+  }
+
+  render() {
+    const encoder = this.device.createCommandEncoder();
+    const pass = encoder.beginRenderPass({
+      label: 'render pass',
+      colorAttachments: [
+        {
+          view: this.context.getCurrentTexture().createView(),
+          loadOp: 'clear',
+          clearValue: [0, 0, 0, 0],
+          storeOp: 'store',
+        },
+      ],
+    });
+    pass.setPipeline(this.pipeline);
+    pass.setVertexBuffer(0, this.vertexBuffer);
+    pass.setBindGroup(0, this.bindGroup);
+    pass.draw(this.vertexArray.length / 3);
+    pass.end();
+
+    const commandBuffer = encoder.finish();
+    this.device.queue.submit([commandBuffer]);
   }
 }
 
