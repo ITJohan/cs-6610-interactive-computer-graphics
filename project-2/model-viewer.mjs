@@ -1,6 +1,8 @@
 // @ts-check
 /// <reference path="webgpu.d.ts" />
 
+import Mat4 from './mat4.mjs';
+
 /**
  * @typedef {{
  *  x: number;
@@ -44,12 +46,7 @@ class ModelViewer extends HTMLElement {
 
           return {
             ...result,
-            vertices: [
-              ...result.vertices,
-              Number(parsedLine[2]),
-              Number(parsedLine[3]),
-              Number(parsedLine[4]),
-            ],
+            vertices: [...result.vertices, Number(parsedLine[2]), Number(parsedLine[3]), Number(parsedLine[4])],
           };
         }
 
@@ -140,9 +137,7 @@ class ModelViewer extends HTMLElement {
     super();
     const shadowRoot = this.attachShadow({ mode: 'open' });
     shadowRoot.appendChild(template.content.cloneNode(true));
-    this.#innerCanvas = /** @type {HTMLCanvasElement} */ (
-      shadowRoot.querySelector('canvas')
-    );
+    this.#innerCanvas = /** @type {HTMLCanvasElement} */ (shadowRoot.querySelector('canvas'));
   }
 
   async connectedCallback() {
@@ -232,15 +227,22 @@ class ModelViewer extends HTMLElement {
     });
 
     // Set up model-view-projection uniform
-    const mvpArray = new Float32Array([
-      0.05, 0, 0, 0, 0, 0.05, 0, 0, 0, 0, 0.05, 0, 0, 0, 0, 1,
-    ]);
+    const modelViewProjectionMatrix = Mat4.identity()
+      .rotateX(45)
+      .rotateZ(45)
+      .scale(10, 10, 10)
+      .translate(this.#innerCanvas.clientWidth / 2, this.#innerCanvas.clientHeight / 2, 0)
+      .orthographic(0, this.#innerCanvas.clientHeight, 0, this.#innerCanvas.clientWidth, 200, -200);
+
+    const modelViewProjectionArray = new Float32Array(modelViewProjectionMatrix.toArray());
+    const mvpBufferSize = 16 * 4;
+
     const mvpBuffer = device.createBuffer({
       label: 'mvp buffer',
-      size: mvpArray.byteLength,
+      size: mvpBufferSize,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
-    device.queue.writeBuffer(mvpBuffer, 0, mvpArray);
+    device.queue.writeBuffer(mvpBuffer, 0, modelViewProjectionArray);
 
     const bindGroup = device.createBindGroup({
       label: 'mvp bind group',
