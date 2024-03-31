@@ -18,20 +18,23 @@ export default class Model {
     const text = await result.text();
     const lines = text.split('\r\n');
 
-    lines.map((line) => {
+    lines.forEach((line) => {
       if (line.includes('v ')) {
         const parsedLine = line.split(' ');
-        this.vertices.concat(Number(parsedLine[2]), Number(parsedLine[3]), Number(parsedLine[4]));
+        this.vertices.push(Number(parsedLine[2]), Number(parsedLine[3]), Number(parsedLine[4]));
+        return;
       }
 
       if (line.includes('vn ')) {
         const parsedLine = line.split(' ');
-        this.vertexNormals.concat(Number(parsedLine[1]), Number(parsedLine[2]), Number(parsedLine[3]));
+        this.vertexNormals.push(Number(parsedLine[1]), Number(parsedLine[2]), Number(parsedLine[3]));
+        return;
       }
 
       if (line.includes('vt ')) {
         const parsedLine = line.split(' ');
-        this.textureCoordinates.concat(Number(parsedLine[1]), Number(parsedLine[2]), Number(parsedLine[3]));
+        this.textureCoordinates.push(Number(parsedLine[1]), Number(parsedLine[2]), Number(parsedLine[3]));
+        return;
       }
 
       if (line.includes('f ')) {
@@ -42,12 +45,14 @@ export default class Model {
         const vertex3 = parsedLine[3].split('/');
         const vertex4 = parsedLine[4].split('/');
 
-        this.triangles.concat(
+        this.triangles.push(
           [Number(vertex1[0]), Number(vertex1[1]), Number(vertex1[2])],
           [Number(vertex2[0]), Number(vertex2[1]), Number(vertex2[2])],
           [Number(vertex3[0]), Number(vertex3[1]), Number(vertex3[2])],
           [Number(vertex4[0]), Number(vertex4[1]), Number(vertex4[2])]
         );
+
+        return;
       }
     });
   }
