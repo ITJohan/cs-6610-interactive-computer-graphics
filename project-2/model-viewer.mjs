@@ -2,6 +2,7 @@
 /// <reference path="webgpu.d.ts" />
 
 import Mat4 from './mat4.mjs';
+import Model from './model.mjs';
 
 /**
  * @typedef {{
@@ -9,15 +10,6 @@ import Mat4 from './mat4.mjs';
  *  y: number;
  *  z: number;
  * }} Vertex
- */
-
-/**
- * @typedef {{
- *  vertices: number[];
- *  vertexNormals: Vertex[];
- *  textureCoordinates: Vertex[];
- *  triangles: {vertex1: Vertex; vertex2: Vertex; vertex3: Vertex; vertex4: Vertex}[];
- * }} Model
  */
 
 const template = document.createElement('template');
@@ -30,114 +22,12 @@ class ModelViewer extends HTMLElement {
   /** @type {HTMLCanvasElement} */ #innerCanvas;
   /** @type {Model} */ #model;
 
-  /**
-   * @param {string} src
-   * @returns {Promise<Model>}
-   */
-  async #parseModel(src) {
-    const result = await fetch(src);
-    const text = await result.text();
-    const lines = text.split('\r\n');
-
-    const parsedModel = lines.reduce(
-      (result, line) => {
-        if (line.includes('v ')) {
-          const parsedLine = line.split(' ');
-
-          return {
-            ...result,
-            vertices: [...result.vertices, Number(parsedLine[2]), Number(parsedLine[3]), Number(parsedLine[4])],
-          };
-        }
-
-        if (line.includes('vn ')) {
-          const parsedLine = line.split(' ');
-
-          return {
-            ...result,
-            vertexNormals: [
-              ...result.vertexNormals,
-              {
-                x: Number(parsedLine[1]),
-                y: Number(parsedLine[2]),
-                z: Number(parsedLine[3]),
-              },
-            ],
-          };
-        }
-
-        if (line.includes('vt ')) {
-          const parsedLine = line.split(' ');
-
-          return {
-            ...result,
-            textureCoordinates: [
-              ...result.textureCoordinates,
-              {
-                x: Number(parsedLine[1]),
-                y: Number(parsedLine[2]),
-                z: Number(parsedLine[3]),
-              },
-            ],
-          };
-        }
-
-        if (line.includes('f ')) {
-          const parsedLine = line.split(' ');
-
-          const vertex1 = parsedLine[1].split('/');
-          const vertex2 = parsedLine[2].split('/');
-          const vertex3 = parsedLine[3].split('/');
-          const vertex4 = parsedLine[4].split('/');
-
-          return {
-            ...result,
-            triangles: [
-              ...result.triangles,
-              {
-                vertex1: {
-                  x: Number(vertex1[0]),
-                  y: Number(vertex1[1]),
-                  z: Number(vertex1[2]),
-                },
-                vertex2: {
-                  x: Number(vertex2[0]),
-                  y: Number(vertex2[1]),
-                  z: Number(vertex2[2]),
-                },
-                vertex3: {
-                  x: Number(vertex3[0]),
-                  y: Number(vertex3[1]),
-                  z: Number(vertex3[2]),
-                },
-                vertex4: {
-                  x: Number(vertex4[0]),
-                  y: Number(vertex4[1]),
-                  z: Number(vertex4[2]),
-                },
-              },
-            ],
-          };
-        }
-
-        return result;
-      },
-      /** @type {Model} */ ({
-        vertices: [],
-        vertexNormals: [],
-        textureCoordinates: [],
-        triangles: [],
-      })
-    );
-
-    return parsedModel;
-  }
-
   constructor() {
     super();
     const shadowRoot = this.attachShadow({ mode: 'open' });
     shadowRoot.appendChild(template.content.cloneNode(true));
     this.#innerCanvas = /** @type {HTMLCanvasElement} */ (shadowRoot.querySelector('canvas'));
+    this.#model = new Model();
   }
 
   async connectedCallback() {
@@ -286,7 +176,7 @@ class ModelViewer extends HTMLElement {
       case 'src':
         this.setAttribute('src', next);
         this[name] = next;
-        this.#model = await this.#parseModel(next);
+        await this.#model.load(next);
     }
   }
 }
