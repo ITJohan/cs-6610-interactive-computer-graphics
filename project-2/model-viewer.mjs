@@ -21,6 +21,8 @@ class ModelViewer extends HTMLElement {
   /** @type {HTMLCanvasElement} */ #innerCanvas;
   /** @type {Model} */ #model;
   /** @type {number} */ zoom;
+  /** @type {number} */ rotX;
+  /** @type {number} */ rotY;
 
   constructor() {
     super();
@@ -29,6 +31,8 @@ class ModelViewer extends HTMLElement {
     this.#innerCanvas = /** @type {HTMLCanvasElement} */ (shadowRoot.querySelector('canvas'));
     this.#model = new Model();
     this.zoom = 0;
+    this.rotX = 0;
+    this.rotY = 0;
   }
 
   async connectedCallback() {
@@ -119,9 +123,10 @@ class ModelViewer extends HTMLElement {
 
     // Set up model-view-projection uniform
     const modelViewProjectionMatrix = Mat4.identity()
-      .rotateX(-90)
+      .rotateX(this.rotY)
+      .rotateY(this.rotX)
       .scale(10, 10, 10)
-      .translate(this.#innerCanvas.clientWidth / 2, this.#innerCanvas.clientHeight / 2, 0)
+      .translate(this.#innerCanvas.clientWidth / 2, this.#innerCanvas.clientHeight / 2, this.zoom)
       .perspective(30, this.#innerCanvas.clientWidth / this.#innerCanvas.clientHeight, 1, 2000)
       .orthographic(0, this.#innerCanvas.clientHeight, 0, this.#innerCanvas.clientWidth, 2000, -2000);
 
@@ -151,7 +156,24 @@ class ModelViewer extends HTMLElement {
     this.#innerCanvas.addEventListener('wheel', (e) => {
       this.zoom += e.deltaY;
       const modelViewProjectionMatrix = Mat4.identity()
-        .rotateX(-90)
+        .rotateX(this.rotY)
+        .rotateY(this.rotX)
+        .scale(10, 10, 10)
+        .translate(this.#innerCanvas.clientWidth / 2, this.#innerCanvas.clientHeight / 2, this.zoom)
+        .perspective(30, this.#innerCanvas.clientWidth / this.#innerCanvas.clientHeight, 2000, -2000)
+        .orthographic(0, this.#innerCanvas.clientHeight, 0, this.#innerCanvas.clientWidth, 2000, -2000);
+
+      const modelViewProjectionArray = new Float32Array(modelViewProjectionMatrix.toArray());
+      this.#device.queue.writeBuffer(mvpBuffer, 0, modelViewProjectionArray);
+      this.render();
+    });
+
+    this.#innerCanvas.addEventListener('mousemove', (e) => {
+      this.rotX += e.movementX;
+      this.rotY += e.movementY;
+      const modelViewProjectionMatrix = Mat4.identity()
+        .rotateX(this.rotY)
+        .rotateY(this.rotX)
         .scale(10, 10, 10)
         .translate(this.#innerCanvas.clientWidth / 2, this.#innerCanvas.clientHeight / 2, this.zoom)
         .perspective(30, this.#innerCanvas.clientWidth / this.#innerCanvas.clientHeight, 2000, -2000)
