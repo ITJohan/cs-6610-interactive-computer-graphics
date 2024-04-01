@@ -20,6 +20,7 @@ class ModelViewer extends HTMLElement {
   /** @type {GPUBindGroup} */ #bindGroup;
   /** @type {HTMLCanvasElement} */ #innerCanvas;
   /** @type {Model} */ #model;
+  /** @type {number} */ zoom;
 
   constructor() {
     super();
@@ -27,6 +28,7 @@ class ModelViewer extends HTMLElement {
     shadowRoot.appendChild(template.content.cloneNode(true));
     this.#innerCanvas = /** @type {HTMLCanvasElement} */ (shadowRoot.querySelector('canvas'));
     this.#model = new Model();
+    this.zoom = 0;
   }
 
   async connectedCallback() {
@@ -117,11 +119,11 @@ class ModelViewer extends HTMLElement {
 
     // Set up model-view-projection uniform
     const modelViewProjectionMatrix = Mat4.identity()
-      .rotateX(45)
-      .rotateZ(45)
+      .rotateX(-90)
       .scale(10, 10, 10)
       .translate(this.#innerCanvas.clientWidth / 2, this.#innerCanvas.clientHeight / 2, 0)
-      .orthographic(0, this.#innerCanvas.clientHeight, 0, this.#innerCanvas.clientWidth, 200, -200);
+      .perspective(30, this.#innerCanvas.clientWidth / this.#innerCanvas.clientHeight, 1, 2000)
+      .orthographic(0, this.#innerCanvas.clientHeight, 0, this.#innerCanvas.clientWidth, 2000, -2000);
 
     const modelViewProjectionArray = new Float32Array(modelViewProjectionMatrix.toArray());
     const mvpBufferSize = 16 * 4;
@@ -145,6 +147,20 @@ class ModelViewer extends HTMLElement {
     });
 
     this.render();
+
+    this.#innerCanvas.addEventListener('wheel', (e) => {
+      this.zoom += e.deltaY;
+      const modelViewProjectionMatrix = Mat4.identity()
+        .rotateX(-90)
+        .scale(10, 10, 10)
+        .translate(this.#innerCanvas.clientWidth / 2, this.#innerCanvas.clientHeight / 2, this.zoom)
+        .perspective(30, this.#innerCanvas.clientWidth / this.#innerCanvas.clientHeight, 2000, -2000)
+        .orthographic(0, this.#innerCanvas.clientHeight, 0, this.#innerCanvas.clientWidth, 2000, -2000);
+
+      const modelViewProjectionArray = new Float32Array(modelViewProjectionMatrix.toArray());
+      this.#device.queue.writeBuffer(mvpBuffer, 0, modelViewProjectionArray);
+      this.render();
+    });
   }
 
   async attributeChangedCallback(name, prev, next) {

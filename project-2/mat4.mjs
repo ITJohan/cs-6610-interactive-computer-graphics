@@ -132,6 +132,18 @@ export default class Mat4 {
     return Mat4.multiply(projectionMatrix, this);
   }
 
+  perspective(
+    /** @type {number} */ fov,
+    /** @type {number} */ aspect,
+    /** @type {number} */ near,
+    /** @type {number} */ far
+  ) {
+    const projectionMatrix = Mat4.identity();
+    projectionMatrix.r3c2 = 0.001;
+
+    return Mat4.multiply(projectionMatrix, this);
+  }
+
   toArray() {
     return [
       this.r0c0,
