@@ -121,16 +121,25 @@ class ModelViewer extends HTMLElement {
       },
     });
 
+    const worldScale = this.#innerCanvas.clientWidth;
     // Set up model-view-projection uniform
-    const modelViewProjectionMatrix = Mat4.identity()
-      .rotateX(this.rotY)
-      .rotateY(this.rotX)
-      .scale(10, 10, 10)
-      .translate(this.#innerCanvas.clientWidth / 2, this.#innerCanvas.clientHeight / 2, this.zoom)
-      .perspective(30, this.#innerCanvas.clientWidth / this.#innerCanvas.clientHeight, 1, 2000)
-      .orthographic(0, this.#innerCanvas.clientHeight, 0, this.#innerCanvas.clientWidth, 2000, -2000);
+    const modelMatrix = Mat4.identity().scale(15, 15, 15);
+    const viewMatrix = Mat4.identity().rotateX(this.rotY).rotateY(this.rotX).translate(0, 0, this.zoom);
+    const perspectiveMatrix = Mat4.identity().perspective(-worldScale, worldScale);
+    const orthographicProjection = Mat4.identity().orthographic(
+      worldScale,
+      -worldScale,
+      -worldScale,
+      worldScale,
+      -worldScale,
+      worldScale
+    );
+    const projectionMatrix = Mat4.multiply(
+      orthographicProjection,
+      Mat4.multiply(perspectiveMatrix, Mat4.multiply(viewMatrix, modelMatrix))
+    );
 
-    const modelViewProjectionArray = new Float32Array(modelViewProjectionMatrix.toArray());
+    const projectionMatrixArray = new Float32Array(projectionMatrix.toArray());
     const mvpBufferSize = 16 * 4;
 
     const mvpBuffer = this.#device.createBuffer({
@@ -138,7 +147,7 @@ class ModelViewer extends HTMLElement {
       size: mvpBufferSize,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
-    this.#device.queue.writeBuffer(mvpBuffer, 0, modelViewProjectionArray);
+    this.#device.queue.writeBuffer(mvpBuffer, 0, projectionMatrixArray);
 
     this.#bindGroup = this.#device.createBindGroup({
       label: 'mvp bind group',
@@ -155,32 +164,50 @@ class ModelViewer extends HTMLElement {
 
     this.#innerCanvas.addEventListener('wheel', (e) => {
       this.zoom += e.deltaY;
-      const modelViewProjectionMatrix = Mat4.identity()
-        .rotateX(this.rotY)
-        .rotateY(this.rotX)
-        .scale(10, 10, 10)
-        .translate(this.#innerCanvas.clientWidth / 2, this.#innerCanvas.clientHeight / 2, this.zoom)
-        .perspective(30, this.#innerCanvas.clientWidth / this.#innerCanvas.clientHeight, 2000, -2000)
-        .orthographic(0, this.#innerCanvas.clientHeight, 0, this.#innerCanvas.clientWidth, 2000, -2000);
+      console.log(this.zoom);
+      const modelMatrix = Mat4.identity().scale(15, 15, 15);
+      const viewMatrix = Mat4.identity().rotateX(this.rotY).rotateY(this.rotX).translate(0, 0, this.zoom);
+      const perspectiveMatrix = Mat4.identity().perspective(-worldScale, worldScale);
+      const orthographicProjection = Mat4.identity().orthographic(
+        worldScale,
+        -worldScale,
+        -worldScale,
+        worldScale,
+        -worldScale,
+        worldScale
+      );
+      const projectionMatrix = Mat4.multiply(
+        orthographicProjection,
+        Mat4.multiply(perspectiveMatrix, Mat4.multiply(viewMatrix, modelMatrix))
+      );
 
-      const modelViewProjectionArray = new Float32Array(modelViewProjectionMatrix.toArray());
-      this.#device.queue.writeBuffer(mvpBuffer, 0, modelViewProjectionArray);
+      const projectionMatrixArray = new Float32Array(projectionMatrix.toArray());
+      this.#device.queue.writeBuffer(mvpBuffer, 0, projectionMatrixArray);
       this.render();
     });
 
+    // TODO: set mouse down flag
     this.#innerCanvas.addEventListener('mousemove', (e) => {
       this.rotX += e.movementX;
       this.rotY += e.movementY;
-      const modelViewProjectionMatrix = Mat4.identity()
-        .rotateX(this.rotY)
-        .rotateY(this.rotX)
-        .scale(10, 10, 10)
-        .translate(this.#innerCanvas.clientWidth / 2, this.#innerCanvas.clientHeight / 2, this.zoom)
-        .perspective(30, this.#innerCanvas.clientWidth / this.#innerCanvas.clientHeight, 2000, -2000)
-        .orthographic(0, this.#innerCanvas.clientHeight, 0, this.#innerCanvas.clientWidth, 2000, -2000);
+      const modelMatrix = Mat4.identity().scale(15, 15, 15);
+      const viewMatrix = Mat4.identity().rotateX(this.rotY).rotateY(this.rotX).translate(0, 0, this.zoom);
+      const perspectiveMatrix = Mat4.identity().perspective(-worldScale, worldScale);
+      const orthographicProjection = Mat4.identity().orthographic(
+        worldScale,
+        -worldScale,
+        -worldScale,
+        worldScale,
+        -worldScale,
+        worldScale
+      );
+      const projectionMatrix = Mat4.multiply(
+        orthographicProjection,
+        Mat4.multiply(perspectiveMatrix, Mat4.multiply(viewMatrix, modelMatrix))
+      );
 
-      const modelViewProjectionArray = new Float32Array(modelViewProjectionMatrix.toArray());
-      this.#device.queue.writeBuffer(mvpBuffer, 0, modelViewProjectionArray);
+      const projectionMatrixArray = new Float32Array(projectionMatrix.toArray());
+      this.#device.queue.writeBuffer(mvpBuffer, 0, projectionMatrixArray);
       this.render();
     });
   }

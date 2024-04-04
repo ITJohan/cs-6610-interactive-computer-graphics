@@ -124,22 +124,22 @@ export default class Mat4 {
     const projectionMatrix = Mat4.identity();
     projectionMatrix.r0c0 = 2 / (right - left);
     projectionMatrix.r1c1 = 2 / (top - bottom);
-    projectionMatrix.r2c2 = 1 / (near - far);
-    projectionMatrix.r0c3 = (right + left) / (left - right);
-    projectionMatrix.r1c3 = (top + bottom) / (bottom - top);
-    projectionMatrix.r2c3 = near / (near - far);
+    projectionMatrix.r2c2 = 1 / (far - near);
+    projectionMatrix.r0c3 = (-2 * left) / (right - left) - 1;
+    projectionMatrix.r1c3 = (-2 * bottom) / (top - bottom) - 1;
+    projectionMatrix.r2c3 = (-1 * near) / (far - near) - 0.5;
 
     return Mat4.multiply(projectionMatrix, this);
   }
 
-  perspective(
-    /** @type {number} */ fov,
-    /** @type {number} */ aspect,
-    /** @type {number} */ near,
-    /** @type {number} */ far
-  ) {
+  // TODO: center object using bounding box
+  perspective(/** @type {number} */ near, /** @type {number} */ far) {
     const projectionMatrix = Mat4.identity();
-    projectionMatrix.r3c2 = 0.001;
+    projectionMatrix.r0c0 = near;
+    projectionMatrix.r1c1 = near;
+    projectionMatrix.r2c2 = near + far;
+    projectionMatrix.r2c3 = -near * far;
+    projectionMatrix.r3c2 = 1;
 
     return Mat4.multiply(projectionMatrix, this);
   }
