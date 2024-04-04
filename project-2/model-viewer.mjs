@@ -30,9 +30,9 @@ class ModelViewer extends HTMLElement {
     shadowRoot.appendChild(template.content.cloneNode(true));
     this.#innerCanvas = /** @type {HTMLCanvasElement} */ (shadowRoot.querySelector('canvas'));
     this.#model = new Model();
-    this.zoom = 0;
+    this.zoom = 500;
     this.rotX = 0;
-    this.rotY = 0;
+    this.rotY = -140;
   }
 
   async connectedCallback() {
