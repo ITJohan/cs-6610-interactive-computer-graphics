@@ -21,6 +21,7 @@ class ModelViewer extends HTMLElement {
   /** @type {HTMLCanvasElement} */ #innerCanvas;
   /** @type {Model} */ #model;
   /** @type {number} */ zoom;
+  /** @type {boolean} */ mousePressed;
   /** @type {number} */ rotX;
   /** @type {number} */ rotY;
 
@@ -185,8 +186,13 @@ class ModelViewer extends HTMLElement {
       this.render();
     });
 
-    // TODO: set mouse down flag
+    this.#innerCanvas.addEventListener('mousedown', () => (this.mousePressed = true));
+
+    this.#innerCanvas.addEventListener('mouseup', () => (this.mousePressed = false));
+
     this.#innerCanvas.addEventListener('mousemove', (e) => {
+      if (!this.mousePressed) return;
+
       this.rotX += e.movementY;
       this.rotY += e.movementX;
       const modelMatrix = Mat4.identity().scale(15, 15, 15);
