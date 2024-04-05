@@ -17,9 +17,11 @@ class ModelViewer extends HTMLElement {
   /** @type {GPURenderPipeline} */ #pipeline;
   /** @type {GPUBuffer} */ #vertexBuffer;
   /** @type {Float32Array} */ #vertexArray;
+  /** @type {GPUBuffer} */ #mvpBuffer;
   /** @type {GPUBindGroup} */ #bindGroup;
   /** @type {HTMLCanvasElement} */ #innerCanvas;
   /** @type {Model} */ #model;
+  /** @type {number} */ worldScale;
   /** @type {number} */ zoom;
   /** @type {boolean} */ mousePressed;
   /** @type {number} */ rotX;
@@ -34,6 +36,7 @@ class ModelViewer extends HTMLElement {
     this.zoom = 500;
     this.rotX = 0;
     this.rotY = -140;
+    this.worldScale = this.#innerCanvas.clientWidth;
   }
 
   async connectedCallback() {
@@ -122,33 +125,12 @@ class ModelViewer extends HTMLElement {
       },
     });
 
-    const worldScale = this.#innerCanvas.clientWidth;
-    // Set up model-view-projection uniform
-    const modelMatrix = Mat4.identity().scale(15, 15, 15);
-    const viewMatrix = Mat4.identity().rotateX(this.rotX).rotateY(this.rotY).translate(0, 0, this.zoom);
-    const perspectiveMatrix = Mat4.identity().perspective(-worldScale, worldScale);
-    const orthographicProjection = Mat4.identity().orthographic(
-      worldScale,
-      -worldScale,
-      -worldScale,
-      worldScale,
-      -worldScale,
-      worldScale
-    );
-    const projectionMatrix = Mat4.multiply(
-      orthographicProjection,
-      Mat4.multiply(perspectiveMatrix, Mat4.multiply(viewMatrix, modelMatrix))
-    );
-
-    const projectionMatrixArray = new Float32Array(projectionMatrix.toArray());
     const mvpBufferSize = 16 * 4;
-
-    const mvpBuffer = this.#device.createBuffer({
+    this.#mvpBuffer = this.#device.createBuffer({
       label: 'mvp buffer',
       size: mvpBufferSize,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
-    this.#device.queue.writeBuffer(mvpBuffer, 0, projectionMatrixArray);
 
     this.#bindGroup = this.#device.createBindGroup({
       label: 'mvp bind group',
@@ -156,7 +138,7 @@ class ModelViewer extends HTMLElement {
       entries: [
         {
           binding: 0,
-          resource: { buffer: mvpBuffer },
+          resource: { buffer: this.#mvpBuffer },
         },
       ],
     });
@@ -165,54 +147,17 @@ class ModelViewer extends HTMLElement {
 
     this.#innerCanvas.addEventListener('wheel', (e) => {
       this.zoom += e.deltaY;
-      const modelMatrix = Mat4.identity().scale(15, 15, 15);
-      const viewMatrix = Mat4.identity().rotateX(this.rotX).rotateY(this.rotY).translate(0, 0, this.zoom);
-      const perspectiveMatrix = Mat4.identity().perspective(-worldScale, worldScale);
-      const orthographicProjection = Mat4.identity().orthographic(
-        worldScale,
-        -worldScale,
-        -worldScale,
-        worldScale,
-        -worldScale,
-        worldScale
-      );
-      const projectionMatrix = Mat4.multiply(
-        orthographicProjection,
-        Mat4.multiply(perspectiveMatrix, Mat4.multiply(viewMatrix, modelMatrix))
-      );
 
-      const projectionMatrixArray = new Float32Array(projectionMatrix.toArray());
-      this.#device.queue.writeBuffer(mvpBuffer, 0, projectionMatrixArray);
       this.render();
     });
-
     this.#innerCanvas.addEventListener('mousedown', () => (this.mousePressed = true));
-
     this.#innerCanvas.addEventListener('mouseup', () => (this.mousePressed = false));
-
     this.#innerCanvas.addEventListener('mousemove', (e) => {
       if (!this.mousePressed) return;
 
       this.rotX += e.movementY;
       this.rotY += e.movementX;
-      const modelMatrix = Mat4.identity().scale(15, 15, 15);
-      const viewMatrix = Mat4.identity().rotateX(this.rotX).rotateY(this.rotY).translate(0, 0, this.zoom);
-      const perspectiveMatrix = Mat4.identity().perspective(-worldScale, worldScale);
-      const orthographicProjection = Mat4.identity().orthographic(
-        worldScale,
-        -worldScale,
-        -worldScale,
-        worldScale,
-        -worldScale,
-        worldScale
-      );
-      const projectionMatrix = Mat4.multiply(
-        orthographicProjection,
-        Mat4.multiply(perspectiveMatrix, Mat4.multiply(viewMatrix, modelMatrix))
-      );
 
-      const projectionMatrixArray = new Float32Array(projectionMatrix.toArray());
-      this.#device.queue.writeBuffer(mvpBuffer, 0, projectionMatrixArray);
       this.render();
     });
   }
@@ -231,6 +176,25 @@ class ModelViewer extends HTMLElement {
   }
 
   render() {
+    const modelMatrix = Mat4.identity().scale(15, 15, 15);
+    const viewMatrix = Mat4.identity().rotateX(this.rotX).rotateY(this.rotY).translate(0, 0, this.zoom);
+    const perspectiveMatrix = Mat4.identity().perspective(-this.worldScale, this.worldScale);
+    const orthographicProjection = Mat4.identity().orthographic(
+      this.worldScale,
+      -this.worldScale,
+      -this.worldScale,
+      this.worldScale,
+      -this.worldScale,
+      this.worldScale
+    );
+    const projectionMatrix = Mat4.multiply(
+      orthographicProjection,
+      Mat4.multiply(perspectiveMatrix, Mat4.multiply(viewMatrix, modelMatrix))
+    );
+
+    const projectionMatrixArray = new Float32Array(projectionMatrix.toArray());
+    this.#device.queue.writeBuffer(this.#mvpBuffer, 0, projectionMatrixArray);
+
     const encoder = this.#device.createCommandEncoder();
     const pass = encoder.beginRenderPass({
       label: 'render pass',
