@@ -124,7 +124,7 @@ class ModelViewer extends HTMLElement {
     const worldScale = this.#innerCanvas.clientWidth;
     // Set up model-view-projection uniform
     const modelMatrix = Mat4.identity().scale(15, 15, 15);
-    const viewMatrix = Mat4.identity().rotateX(this.rotY).rotateY(this.rotX).translate(0, 0, this.zoom);
+    const viewMatrix = Mat4.identity().rotateX(this.rotX).rotateY(this.rotY).translate(0, 0, this.zoom);
     const perspectiveMatrix = Mat4.identity().perspective(-worldScale, worldScale);
     const orthographicProjection = Mat4.identity().orthographic(
       worldScale,
@@ -164,9 +164,8 @@ class ModelViewer extends HTMLElement {
 
     this.#innerCanvas.addEventListener('wheel', (e) => {
       this.zoom += e.deltaY;
-      console.log(this.zoom);
       const modelMatrix = Mat4.identity().scale(15, 15, 15);
-      const viewMatrix = Mat4.identity().rotateX(this.rotY).rotateY(this.rotX).translate(0, 0, this.zoom);
+      const viewMatrix = Mat4.identity().rotateX(this.rotX).rotateY(this.rotY).translate(0, 0, this.zoom);
       const perspectiveMatrix = Mat4.identity().perspective(-worldScale, worldScale);
       const orthographicProjection = Mat4.identity().orthographic(
         worldScale,
@@ -188,10 +187,10 @@ class ModelViewer extends HTMLElement {
 
     // TODO: set mouse down flag
     this.#innerCanvas.addEventListener('mousemove', (e) => {
-      this.rotX += e.movementX;
-      this.rotY += e.movementY;
+      this.rotX += e.movementY;
+      this.rotY += e.movementX;
       const modelMatrix = Mat4.identity().scale(15, 15, 15);
-      const viewMatrix = Mat4.identity().rotateX(this.rotY).rotateY(this.rotX).translate(0, 0, this.zoom);
+      const viewMatrix = Mat4.identity().rotateX(this.rotX).rotateY(this.rotY).translate(0, 0, this.zoom);
       const perspectiveMatrix = Mat4.identity().perspective(-worldScale, worldScale);
       const orthographicProjection = Mat4.identity().orthographic(
         worldScale,
