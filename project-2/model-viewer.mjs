@@ -34,8 +34,8 @@ class ModelViewer extends HTMLElement {
     this.#innerCanvas = /** @type {HTMLCanvasElement} */ (shadowRoot.querySelector('canvas'));
     this.#model = new Model();
     this.zoom = 500;
-    this.rotX = 0;
-    this.rotY = -140;
+    this.rotX = -90;
+    this.rotY = 0;
     this.worldScale = this.#innerCanvas.clientWidth;
   }
 
@@ -176,8 +176,12 @@ class ModelViewer extends HTMLElement {
   }
 
   render() {
+    const centerZ = this.#model.boundingBox.maxZ - this.#model.boundingBox.minZ;
     const modelMatrix = Mat4.identity().scale(15, 15, 15);
-    const viewMatrix = Mat4.identity().rotateX(this.rotX).rotateY(this.rotY).translate(0, 0, this.zoom);
+    const viewMatrix = Mat4.identity()
+      .rotateX(this.rotX)
+      .rotateY(this.rotY)
+      .translate(0, (centerZ * 15) / 2, this.zoom);
     const perspectiveMatrix = Mat4.identity().perspective(-this.worldScale, this.worldScale);
     const orthographicProjection = Mat4.identity().orthographic(
       this.worldScale,

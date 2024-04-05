@@ -5,12 +5,30 @@ export default class Model {
   /** @type {number[]} */ vertexNormals;
   /** @type {number[]} */ textureCoordinates;
   /** @type {[number, number, number][]} */ triangles;
+  /**
+   * @type {{
+   * minX: number;
+   * maxX: number;
+   * minY: number;
+   * maxY: number;
+   * minZ: number;
+   * maxZ: number;
+   * }}
+   */ boundingBox;
 
   constructor() {
     this.vertices = [];
     this.vertexNormals = [];
     this.textureCoordinates = [];
     this.triangles = [];
+    this.boundingBox = {
+      minX: 0,
+      maxX: 0,
+      minY: 0,
+      maxY: 0,
+      minZ: 0,
+      maxZ: 0,
+    };
   }
 
   async load(/** @type {string} */ src) {
@@ -21,7 +39,30 @@ export default class Model {
     lines.forEach((line) => {
       if (line.includes('v ')) {
         const parsedLine = line.split(' ');
-        this.vertices.push(Number(parsedLine[2]), Number(parsedLine[3]), Number(parsedLine[4]));
+        const x = Number(parsedLine[2]);
+        const y = Number(parsedLine[3]);
+        const z = Number(parsedLine[4]);
+
+        if (x < this.boundingBox.minX) {
+          this.boundingBox.minX = x;
+        }
+        if (x > this.boundingBox.maxX) {
+          this.boundingBox.maxX = x;
+        }
+        if (y < this.boundingBox.minY) {
+          this.boundingBox.minY = y;
+        }
+        if (y > this.boundingBox.maxY) {
+          this.boundingBox.maxY = y;
+        }
+        if (z < this.boundingBox.minZ) {
+          this.boundingBox.minZ = z;
+        }
+        if (z > this.boundingBox.maxZ) {
+          this.boundingBox.maxZ = z;
+        }
+
+        this.vertices.push(x, y, z);
         return;
       }
 
