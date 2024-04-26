@@ -17,6 +17,8 @@ class ModelViewer extends HTMLElement {
   /** @type {GPURenderPipeline} */ #pipeline;
   /** @type {GPUBuffer} */ #vertexBuffer;
   /** @type {Float32Array} */ #vertexArray;
+  /** @type {GPUBuffer} */ #indexBuffer;
+  /** @type {Uint16Array} */ #indexArray;
   /** @type {GPUBuffer} */ #mvpBuffer;
   /** @type {GPUBindGroup} */ #bindGroup;
   /** @type {HTMLCanvasElement} */ #innerCanvas;
@@ -85,6 +87,14 @@ class ModelViewer extends HTMLElement {
         },
       ],
     };
+    // Set up index buffer
+    this.#indexArray = new Uint16Array(this.#model.triangles);
+    this.#indexBuffer = this.#device.createBuffer({
+      label: 'index buffer',
+      size: this.#indexArray.byteLength,
+      usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+    });
+    this.#device.queue.writeBuffer(this.#indexBuffer, 0, this.#indexArray);
 
     const shaderModule = this.#device.createShaderModule({
       label: 'shader module',
@@ -119,9 +129,6 @@ class ModelViewer extends HTMLElement {
             format: preferredFormat,
           },
         ],
-      },
-      primitive: {
-        topology: 'point-list',
       },
     });
 
@@ -214,7 +221,8 @@ class ModelViewer extends HTMLElement {
     pass.setPipeline(this.#pipeline);
     pass.setVertexBuffer(0, this.#vertexBuffer);
     pass.setBindGroup(0, this.#bindGroup);
-    pass.draw(this.#vertexArray.length / 3);
+    pass.setIndexBuffer(this.#indexBuffer, 'uint16');
+    pass.drawIndexed(this.#indexArray.length);
     pass.end();
 
     const commandBuffer = encoder.finish();
