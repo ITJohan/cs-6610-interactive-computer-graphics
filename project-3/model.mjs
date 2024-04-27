@@ -4,7 +4,7 @@ export default class Model {
   /** @type {number[]} */ vertices;
   /** @type {number[]} */ vertexNormals;
   /** @type {number[]} */ textureCoordinates;
-  /** @type {number[]} */ triangles;
+  /** @type {{vertexIndices: number[], normalIndices: number[], textureIndices: number[]}} */ faces;
   /**
    * @type {{
    * minX: number;
@@ -20,7 +20,7 @@ export default class Model {
     this.vertices = [];
     this.vertexNormals = [];
     this.textureCoordinates = [];
-    this.triangles = [];
+    this.faces = { vertexIndices: [], normalIndices: [], textureIndices: [] };
     this.boundingBox = {
       minX: 0,
       maxX: 0,
@@ -86,7 +86,30 @@ export default class Model {
         const [vertexIndex3, textureIndex3, normalIndex3] = parsedLine[3].split('/').map((index) => Number(index) - 1);
         const [vertexIndex4, textureIndex4, normalIndex4] = parsedLine[4].split('/').map((index) => Number(index) - 1);
 
-        this.triangles.push(vertexIndex1, vertexIndex2, vertexIndex3, vertexIndex1, vertexIndex3, vertexIndex4);
+        this.faces.vertexIndices.push(
+          vertexIndex1,
+          vertexIndex2,
+          vertexIndex3,
+          vertexIndex1,
+          vertexIndex3,
+          vertexIndex4
+        );
+        this.faces.textureIndices.push(
+          textureIndex1,
+          textureIndex2,
+          textureIndex3,
+          textureIndex1,
+          textureIndex3,
+          textureIndex4
+        );
+        this.faces.normalIndices.push(
+          normalIndex1,
+          normalIndex2,
+          normalIndex3,
+          normalIndex1,
+          normalIndex3,
+          normalIndex4
+        );
 
         return;
       }

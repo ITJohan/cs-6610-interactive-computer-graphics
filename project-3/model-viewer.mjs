@@ -88,7 +88,7 @@ class ModelViewer extends HTMLElement {
       ],
     };
     // Set up index buffer
-    this.#indexArray = new Uint16Array(this.#model.triangles);
+    this.#indexArray = new Uint16Array(this.#model.faces.vertexIndices);
     this.#indexBuffer = this.#device.createBuffer({
       label: 'index buffer',
       size: this.#indexArray.byteLength,
