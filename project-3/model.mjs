@@ -1,10 +1,10 @@
 // @ts-check
 
 export default class Model {
-  /** @type {number[]} */ vertices;
-  /** @type {number[]} */ vertexNormals;
-  /** @type {number[]} */ textureCoordinates;
-  /** @type {{vertexIndices: number[], normalIndices: number[], textureIndices: number[]}} */ faces;
+  /** @type {{x: number; y: number; z: number}[]} */ vertices;
+  /** @type {{x: number; y: number; z: number}[]} */ vertexNormals;
+  /** @type {{x: number; y: number; z: number}[]} */ textureCoordinates;
+  /** @type {{vertexIndex: number, normalIndex: number, textureIndex: number}[]} */ indices;
   /**
    * @type {{
    * minX: number;
@@ -20,7 +20,7 @@ export default class Model {
     this.vertices = [];
     this.vertexNormals = [];
     this.textureCoordinates = [];
-    this.faces = { vertexIndices: [], normalIndices: [], textureIndices: [] };
+    this.indices = [];
     this.boundingBox = {
       minX: 0,
       maxX: 0,
@@ -62,19 +62,25 @@ export default class Model {
           this.boundingBox.maxZ = z;
         }
 
-        this.vertices.push(x, y, z);
+        this.vertices.push({ x, y, z });
         return;
       }
 
       if (line.includes('vn ')) {
         const parsedLine = line.split(' ');
-        this.vertexNormals.push(Number(parsedLine[1]), Number(parsedLine[2]), Number(parsedLine[3]));
+        const x = Number(parsedLine[1]);
+        const y = Number(parsedLine[2]);
+        const z = Number(parsedLine[3]);
+        this.vertexNormals.push({ x, y, z });
         return;
       }
 
       if (line.includes('vt ')) {
         const parsedLine = line.split(' ');
-        this.textureCoordinates.push(Number(parsedLine[1]), Number(parsedLine[2]), Number(parsedLine[3]));
+        const x = Number(parsedLine[1]);
+        const y = Number(parsedLine[2]);
+        const z = Number(parsedLine[3]);
+        this.textureCoordinates.push({ x, y, z });
         return;
       }
 
@@ -86,33 +92,40 @@ export default class Model {
         const [vertexIndex3, textureIndex3, normalIndex3] = parsedLine[3].split('/').map((index) => Number(index) - 1);
         const [vertexIndex4, textureIndex4, normalIndex4] = parsedLine[4].split('/').map((index) => Number(index) - 1);
 
-        this.faces.vertexIndices.push(
-          vertexIndex1,
-          vertexIndex2,
-          vertexIndex3,
-          vertexIndex1,
-          vertexIndex3,
-          vertexIndex4
-        );
-        this.faces.textureIndices.push(
-          textureIndex1,
-          textureIndex2,
-          textureIndex3,
-          textureIndex1,
-          textureIndex3,
-          textureIndex4
-        );
-        this.faces.normalIndices.push(
-          normalIndex1,
-          normalIndex2,
-          normalIndex3,
-          normalIndex1,
-          normalIndex3,
-          normalIndex4
-        );
+        this.indices.push({ vertexIndex: vertexIndex1, normalIndex: normalIndex1, textureIndex: textureIndex1 });
+        this.indices.push({ vertexIndex: vertexIndex2, normalIndex: normalIndex2, textureIndex: textureIndex2 });
+        this.indices.push({ vertexIndex: vertexIndex3, normalIndex: normalIndex3, textureIndex: textureIndex3 });
+
+        if (vertexIndex4 !== -1) {
+          this.indices.push({ vertexIndex: vertexIndex1, normalIndex: normalIndex1, textureIndex: textureIndex1 });
+          this.indices.push({ vertexIndex: vertexIndex3, normalIndex: normalIndex3, textureIndex: textureIndex3 });
+          this.indices.push({ vertexIndex: vertexIndex4, normalIndex: normalIndex4, textureIndex: textureIndex4 });
+        }
 
         return;
       }
     });
+  }
+
+  /** @returns {number[]} */
+  getInterleavedVertexData() {
+    /** @type {number[]} */
+    const data = new Array(this.indices.length * 3);
+
+    for (let i = 0; i < this.indices.length; i++) {
+      const { vertexIndex } = this.indices[i];
+
+      const vertexData = this.vertices[vertexIndex];
+
+      const dataIndex = vertexIndex * 3;
+
+      if (typeof data[dataIndex] !== 'number') {
+        data[dataIndex] = vertexData.x;
+        data[dataIndex + 1] = vertexData.y;
+        data[dataIndex + 2] = vertexData.z;
+      }
+    }
+
+    return data;
   }
 }

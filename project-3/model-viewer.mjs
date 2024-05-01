@@ -70,25 +70,16 @@ class ModelViewer extends HTMLElement {
     });
 
     // Set up vertex buffer
-    this.#vertexArray = new Float32Array(this.#model.vertices);
+    this.#vertexArray = new Float32Array(this.#model.getInterleavedVertexData());
     this.#vertexBuffer = this.#device.createBuffer({
       label: 'vertex buffer',
       size: this.#vertexArray.byteLength,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
     this.#device.queue.writeBuffer(this.#vertexBuffer, 0, this.#vertexArray);
-    /** @type {GPUVertexBufferLayout} */ const vertexBufferLayout = {
-      arrayStride: 3 * 4,
-      attributes: [
-        {
-          format: 'float32x3',
-          offset: 0,
-          shaderLocation: 0,
-        },
-      ],
-    };
+
     // Set up index buffer
-    this.#indexArray = new Uint16Array(this.#model.faces.vertexIndices);
+    this.#indexArray = new Uint16Array(this.#model.indices.map((index) => index.vertexIndex));
     this.#indexBuffer = this.#device.createBuffer({
       label: 'index buffer',
       size: this.#indexArray.byteLength,
@@ -99,11 +90,15 @@ class ModelViewer extends HTMLElement {
     const shaderModule = this.#device.createShaderModule({
       label: 'shader module',
       code: `
+        struct VertexInput {
+          @location(0) position: vec3f,
+        };
+
         @group(0) @binding(0) var<uniform> mvp : mat4x4<f32>;
 
         @vertex
-        fn vertexMain(@location(0) pos: vec3f) -> @builtin(position) vec4f {
-          return mvp * vec4f(pos, 1);
+        fn vertexMain(vertexInput: VertexInput) -> @builtin(position) vec4f {
+          return mvp * vec4f(vertexInput.position, 1);
         }
 
         @fragment
@@ -119,7 +114,18 @@ class ModelViewer extends HTMLElement {
       vertex: {
         module: shaderModule,
         entryPoint: 'vertexMain',
-        buffers: [vertexBufferLayout],
+        buffers: [
+          {
+            arrayStride: 3 * 4,
+            attributes: [
+              {
+                shaderLocation: 0,
+                offset: 0,
+                format: 'float32x3',
+              },
+            ],
+          },
+        ],
       },
       fragment: {
         module: shaderModule,
@@ -131,7 +137,7 @@ class ModelViewer extends HTMLElement {
         ],
       },
     });
-
+    // Set up mvp buffer
     const mvpBufferSize = 16 * 4;
     this.#mvpBuffer = this.#device.createBuffer({
       label: 'mvp buffer',
