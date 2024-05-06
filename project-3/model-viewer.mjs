@@ -92,19 +92,28 @@ class ModelViewer extends HTMLElement {
       code: `
         struct VertexInput {
           @location(0) position: vec3f,
-          @location(1) normal: vec3f
+          @location(1) normal: vec3f,
         };
+
+        struct VertexOutput {
+          @builtin(position) position: vec4f,
+          @location(0) normal: vec3f,
+        }
 
         @group(0) @binding(0) var<uniform> mvp : mat4x4<f32>;
 
         @vertex
-        fn vertexMain(vertexInput: VertexInput) -> @builtin(position) vec4f {
-          return mvp * vec4f(vertexInput.position, 1);
+        fn vertexMain(vertexInput: VertexInput) -> VertexOutput {
+          var vertexOutput: VertexOutput;
+          vertexOutput.position = mvp * vec4f(vertexInput.position, 1);
+          vertexOutput.normal = vertexInput.normal;
+          return vertexOutput;
         }
 
         @fragment
-        fn fragmentMain() -> @location(0) vec4f {
-          return vec4f(1, 1, 1, 1);
+        fn fragmentMain(vertexOutput: VertexOutput) -> @location(0) vec4f {
+          let normal = normalize(vertexOutput.normal);
+          return vec4f(clamp(-normal.x, 0, 1), clamp(normal.y, 0, 1), clamp(normal.z, 0, 1), 1);
         }
       `,
     });
