@@ -110,19 +110,23 @@ export default class Model {
   /** @returns {number[]} */
   getInterleavedVertexData() {
     /** @type {number[]} */
-    const data = new Array(this.indices.length * 3);
+    const data = new Array(this.indices.length * (3 + 3));
 
     for (let i = 0; i < this.indices.length; i++) {
-      const { vertexIndex } = this.indices[i];
+      const { vertexIndex, normalIndex } = this.indices[i];
 
       const vertexData = this.vertices[vertexIndex];
+      const normalData = this.vertexNormals[normalIndex];
 
-      const dataIndex = vertexIndex * 3;
+      const dataIndex = vertexIndex * (3 + 3);
 
       if (typeof data[dataIndex] !== 'number') {
         data[dataIndex] = vertexData.x;
         data[dataIndex + 1] = vertexData.y;
         data[dataIndex + 2] = vertexData.z;
+        data[dataIndex + 3] = normalData.x;
+        data[dataIndex + 4] = normalData.y;
+        data[dataIndex + 5] = normalData.z;
       }
     }
 

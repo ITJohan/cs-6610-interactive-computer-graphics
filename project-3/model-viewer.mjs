@@ -92,6 +92,7 @@ class ModelViewer extends HTMLElement {
       code: `
         struct VertexInput {
           @location(0) position: vec3f,
+          @location(1) normal: vec3f
         };
 
         @group(0) @binding(0) var<uniform> mvp : mat4x4<f32>;
@@ -116,11 +117,16 @@ class ModelViewer extends HTMLElement {
         entryPoint: 'vertexMain',
         buffers: [
           {
-            arrayStride: 3 * 4,
+            arrayStride: (3 + 3) * 4,
             attributes: [
               {
                 shaderLocation: 0,
                 offset: 0,
+                format: 'float32x3',
+              },
+              {
+                shaderLocation: 1,
+                offset: 12,
                 format: 'float32x3',
               },
             ],
