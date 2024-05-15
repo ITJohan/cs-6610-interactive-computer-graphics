@@ -19,7 +19,7 @@ class ModelViewer extends HTMLElement {
   /** @type {Float32Array} */ #vertexArray;
   /** @type {GPUBuffer} */ #indexBuffer;
   /** @type {Uint16Array} */ #indexArray;
-  /** @type {GPUBuffer} */ #mvpBuffer;
+  /** @type {GPUBuffer} */ #uniformsBuffer;
   /** @type {GPUBindGroup} */ #bindGroup;
   /** @type {HTMLCanvasElement} */ #innerCanvas;
   /** @type {Model} */ #model;
@@ -70,7 +70,7 @@ class ModelViewer extends HTMLElement {
     });
 
     // Set up vertex buffer
-    this.#vertexArray = new Float32Array(this.#model.getInterleavedVertexData());
+    this.#vertexArray = new Float32Array(Array.from(this.#model.vertexIndexToBufferDataMap.values()).flatMap(sub => sub));
     this.#vertexBuffer = this.#device.createBuffer({
       label: 'vertex buffer',
       size: this.#vertexArray.byteLength,
@@ -79,7 +79,7 @@ class ModelViewer extends HTMLElement {
     this.#device.queue.writeBuffer(this.#vertexBuffer, 0, this.#vertexArray);
 
     // Set up index buffer
-    this.#indexArray = new Uint16Array(this.#model.indices.map((index) => index.vertexIndex));
+    this.#indexArray = new Uint16Array(this.#model.indices.map((index) => index));
     this.#indexBuffer = this.#device.createBuffer({
       label: 'index buffer',
       size: this.#indexArray.byteLength,
@@ -90,30 +90,33 @@ class ModelViewer extends HTMLElement {
     const shaderModule = this.#device.createShaderModule({
       label: 'shader module',
       code: `
+        struct Uniforms {
+          mvp: mat4x4f,
+        };
+
         struct VertexInput {
-          @location(0) position: vec3f,
-          @location(1) normal: vec3f,
+          @location(0) position: vec4f,
+          @location(1) normal: vec4f,
         };
 
         struct VertexOutput {
           @builtin(position) position: vec4f,
-          @location(0) normal: vec3f,
+          @location(0) normal: vec4f,
         }
 
-        @group(0) @binding(0) var<uniform> mvp : mat4x4<f32>;
+        @group(0) @binding(0) var<uniform> uniforms: Uniforms;
 
         @vertex
         fn vertexMain(vertexInput: VertexInput) -> VertexOutput {
           var vertexOutput: VertexOutput;
-          vertexOutput.position = mvp * vec4f(vertexInput.position, 1);
+          vertexOutput.position = uniforms.mvp * vertexInput.position;
           vertexOutput.normal = vertexInput.normal;
           return vertexOutput;
         }
 
         @fragment
         fn fragmentMain(vertexOutput: VertexOutput) -> @location(0) vec4f {
-          let normal = normalize(vertexOutput.normal);
-          return vec4f(clamp(-normal.x, 0, 1), clamp(normal.y, 0, 1), clamp(normal.z, 0, 1), 1);
+          return vec4(clamp(vertexOutput.normal.x, 0.2, 0.8), clamp(vertexOutput.normal.y, 0.2, 0.8), clamp(vertexOutput.normal.z, 0.2, 0.8), 1);
         }
       `,
     });
@@ -151,22 +154,30 @@ class ModelViewer extends HTMLElement {
           },
         ],
       },
+      primitive: {
+        cullMode: 'front',
+      },
+      depthStencil: {
+        depthWriteEnabled: true,
+        depthCompare: 'less',
+        format: 'depth24plus',
+      },
     });
-    // Set up mvp buffer
-    const mvpBufferSize = 16 * 4;
-    this.#mvpBuffer = this.#device.createBuffer({
-      label: 'mvp buffer',
-      size: mvpBufferSize,
+    // Set up uniforms buffer
+    const uniformsBufferSize = 16 * 4;
+    this.#uniformsBuffer = this.#device.createBuffer({
+      label: 'uniforms buffer',
+      size: uniformsBufferSize,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
     this.#bindGroup = this.#device.createBindGroup({
-      label: 'mvp bind group',
+      label: 'uniforms bind group',
       layout: this.#pipeline.getBindGroupLayout(0),
       entries: [
         {
           binding: 0,
-          resource: { buffer: this.#mvpBuffer },
+          resource: { buffer: this.#uniformsBuffer },
         },
       ],
     });
@@ -225,19 +236,33 @@ class ModelViewer extends HTMLElement {
     );
 
     const projectionMatrixArray = new Float32Array(projectionMatrix.toArray());
-    this.#device.queue.writeBuffer(this.#mvpBuffer, 0, projectionMatrixArray);
+    this.#device.queue.writeBuffer(this.#uniformsBuffer, 0, projectionMatrixArray);
+
+    const canvasTexture = this.#context.getCurrentTexture();
+
+    const depthTexture = this.#device.createTexture({
+      size: [canvasTexture.width, canvasTexture.height],
+      format: 'depth24plus',
+      usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    });
 
     const encoder = this.#device.createCommandEncoder();
     const pass = encoder.beginRenderPass({
       label: 'render pass',
       colorAttachments: [
         {
-          view: this.#context.getCurrentTexture().createView(),
+          view: canvasTexture.createView(),
           loadOp: 'clear',
-          clearValue: [0, 0, 0, 0],
           storeOp: 'store',
+          clearValue: [0, 0, 0, 0],
         },
       ],
+      depthStencilAttachment: {
+        view: depthTexture.createView(),
+        depthLoadOp: 'clear',
+        depthStoreOp: 'store',
+        depthClearValue: 1.0,
+      },
     });
     pass.setPipeline(this.#pipeline);
     pass.setVertexBuffer(0, this.#vertexBuffer);
