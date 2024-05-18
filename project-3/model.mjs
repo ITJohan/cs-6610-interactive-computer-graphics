@@ -36,16 +36,16 @@ export default class Model {
   async load(/** @type {string} */ src) {
     const result = await fetch(src);
     const text = await result.text();
-    const lines = text.split('\n');
+    const lines = text.split('\r\n');
 
     lines.forEach((line) => {
-      if (line.startsWith('#')) return;
-      
+      if (line.startsWith('#') || line === '') return;
+
       if (line.includes('v ')) {
         const parsedLine = line.split(' ');
-        const x = Number(parsedLine[1]);
-        const y = Number(parsedLine[2]);
-        const z = Number(parsedLine[3]);
+        const x = Number(parsedLine[2]);
+        const y = Number(parsedLine[3]);
+        const z = Number(parsedLine[4]);
 
         if (x < this.boundingBox.minX) {
           this.boundingBox.minX = x;
@@ -108,7 +108,7 @@ export default class Model {
           for (const [mapKey] of this.vertexIndexToBufferDataMap) {
             if (mapKey === key) {
               if (keyIndex === 4) {
-                this.indices.push(vertexIndex - 3, vertexIndex - 1, vertexIndex)
+                this.indices.push(this.indices[this.indices.length - 3], this.indices[this.indices.length - 1], vertexIndex)
               } else {
                 this.indices.push(vertexIndex)
               }
