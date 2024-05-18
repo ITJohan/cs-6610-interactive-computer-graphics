@@ -39,6 +39,8 @@ export default class Model {
     const lines = text.split('\n');
 
     lines.forEach((line) => {
+      if (line.startsWith('#')) return;
+      
       if (line.includes('v ')) {
         const parsedLine = line.split(' ');
         const x = Number(parsedLine[1]);
@@ -90,7 +92,7 @@ export default class Model {
         const parsedLine = line.split(' ');
 
         parsedLine.forEach((key, keyIndex) => {
-          if (keyIndex === 0) return;
+          if (key === '' || keyIndex === 0) return;
           
           if (this.vertexIndexToBufferDataMap.has(key) === false) {
             const [vertexIndex, textureIndex, normalIndex] = key.split('/').map((index) => Number(index) - 1);

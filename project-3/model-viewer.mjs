@@ -36,7 +36,7 @@ class ModelViewer extends HTMLElement {
     this.#innerCanvas = /** @type {HTMLCanvasElement} */ (shadowRoot.querySelector('canvas'));
     this.#model = new Model();
     this.zoom = 500;
-    this.rotX = -90;
+    this.rotX = 0;
     this.rotY = 0;
     this.worldScale = this.#innerCanvas.clientWidth;
   }
@@ -116,7 +116,7 @@ class ModelViewer extends HTMLElement {
 
         @fragment
         fn fragmentMain(vertexOutput: VertexOutput) -> @location(0) vec4f {
-          return vec4(clamp(vertexOutput.normal.x, 0.2, 0.8), clamp(vertexOutput.normal.y, 0.2, 0.8), clamp(vertexOutput.normal.z, 0.2, 0.8), 1);
+          return vec4f(abs(vertexOutput.normal.x), abs(vertexOutput.normal.y), abs(vertexOutput.normal.z), 1);
         }
       `,
     });
@@ -155,7 +155,7 @@ class ModelViewer extends HTMLElement {
         ],
       },
       primitive: {
-        cullMode: 'front',
+        cullMode: 'back',
       },
       depthStencil: {
         depthWriteEnabled: true,
@@ -221,7 +221,7 @@ class ModelViewer extends HTMLElement {
       .rotateX(this.rotX)
       .rotateY(this.rotY)
       .translate(0, (centerZ * 15) / 2, this.zoom);
-    const perspectiveMatrix = Mat4.identity().perspective(-this.worldScale, this.worldScale);
+    const perspectiveMatrix = Mat4.identity().perspective(this.worldScale, this.worldScale);
     const orthographicProjection = Mat4.identity().orthographic(
       this.worldScale,
       -this.worldScale,
