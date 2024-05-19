@@ -79,7 +79,7 @@ class ModelViewer extends HTMLElement {
     this.#device.queue.writeBuffer(this.#vertexBuffer, 0, this.#vertexArray);
 
     // Set up index buffer
-    this.#indexArray = new Uint16Array(this.#model.indices.map((index) => index));
+    this.#indexArray = new Uint16Array(this.#model.indices);
     this.#indexBuffer = this.#device.createBuffer({
       label: 'index buffer',
       size: this.#indexArray.byteLength,
