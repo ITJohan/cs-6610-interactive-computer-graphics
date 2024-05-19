@@ -203,4 +203,13 @@ export default class Mat4 {
       matrixOfAdjugate[12] / determinant, matrixOfAdjugate[13] / determinant, matrixOfAdjugate[14] / determinant, matrixOfAdjugate[15] / determinant,
     )
   }
+
+  transpose() {
+    return new Mat4(
+      this.r0c0, this.r0c1, this.r0c2, this.r0c3,
+      this.r1c0, this.r1c1, this.r1c2, this.r1c3,
+      this.r2c0, this.r2c1, this.r2c2, this.r2c3,
+      this.r3c0, this.r3c1, this.r3c2, this.r3c3
+    )
+  }
 }
