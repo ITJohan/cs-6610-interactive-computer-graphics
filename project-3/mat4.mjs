@@ -164,4 +164,43 @@ export default class Mat4 {
       this.r3c3,
     ];
   }
+
+  inverse() {
+    const det = (
+      /** @type {number} */ row,
+      /** @type {number} */ col,
+      /** @type {number[]} */ mat) => {
+        const subMat = mat.filter((_, index) => index % 4 !== row && Math.floor(index / 4) !== col)
+        return subMat[0] * (subMat[4] * subMat[8] - subMat[7] * subMat[5]) -
+              subMat[3] * (subMat[1] * subMat[8] - subMat[7] * subMat[2]) +
+              subMat[6] * (subMat[1] * subMat[5] - subMat[4] * subMat[3]);
+      }
+
+    const mat = this.toArray();
+
+    const matrixOfMinors = [
+      det(0, 0, mat), det(1, 0, mat), det(2, 0, mat), det(3, 0, mat),
+      det(0, 1, mat), det(1, 1, mat), det(2, 1, mat), det(3, 1, mat),
+      det(0, 2, mat), det(1, 2, mat), det(2, 2, mat), det(3, 2, mat),
+      det(0, 3, mat), det(1, 3, mat), det(2, 3, mat), det(3, 3, mat),
+    ]
+
+    const matrixOfCofactors = matrixOfMinors.map((value, index) => index % 1 === 1 ? -1 * value : value)
+
+    const matrixOfAdjugate = [
+      matrixOfCofactors[0], matrixOfCofactors[4], matrixOfCofactors[8], matrixOfCofactors[12],
+      matrixOfCofactors[1], matrixOfCofactors[5], matrixOfCofactors[9], matrixOfCofactors[13],
+      matrixOfCofactors[2], matrixOfCofactors[6], matrixOfCofactors[10], matrixOfCofactors[14],
+      matrixOfCofactors[3], matrixOfCofactors[7], matrixOfCofactors[11], matrixOfCofactors[15]
+    ]
+
+    const determinant = mat[0] * matrixOfMinors[0] - mat[4] * matrixOfMinors[4] + mat[8] * matrixOfMinors[8];
+
+    return new Mat4(
+      matrixOfAdjugate[0] / determinant, matrixOfAdjugate[1] / determinant, matrixOfAdjugate[2] / determinant, matrixOfAdjugate[3] / determinant,
+      matrixOfAdjugate[4] / determinant, matrixOfAdjugate[5] / determinant, matrixOfAdjugate[6] / determinant, matrixOfAdjugate[7] / determinant,
+      matrixOfAdjugate[8] / determinant, matrixOfAdjugate[9] / determinant, matrixOfAdjugate[10] / determinant, matrixOfAdjugate[11] / determinant,
+      matrixOfAdjugate[12] / determinant, matrixOfAdjugate[13] / determinant, matrixOfAdjugate[14] / determinant, matrixOfAdjugate[15] / determinant,
+    )
+  }
 }
