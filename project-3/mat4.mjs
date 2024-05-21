@@ -185,7 +185,12 @@ export default class Mat4 {
       det(0, 3, mat), det(1, 3, mat), det(2, 3, mat), det(3, 3, mat),
     ]
 
-    const matrixOfCofactors = matrixOfMinors.map((value, index) => index % 1 === 1 ? -1 * value : value)
+    const matrixOfCofactors = [
+      matrixOfMinors[0], -1 * matrixOfMinors[1], matrixOfMinors[2], -1 * matrixOfMinors[3],
+      -1 * matrixOfMinors[4], matrixOfMinors[5], -1 * matrixOfMinors[6], matrixOfMinors[7],
+      matrixOfMinors[8], -1 * matrixOfMinors[9], matrixOfMinors[10], -1 * matrixOfMinors[11],
+      -1 * matrixOfMinors[12], matrixOfMinors[13], -1 * matrixOfMinors[14], matrixOfMinors[15],
+    ]
 
     const matrixOfAdjugate = [
       matrixOfCofactors[0], matrixOfCofactors[4], matrixOfCofactors[8], matrixOfCofactors[12],
