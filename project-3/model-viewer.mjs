@@ -1,6 +1,7 @@
 // @ts-check
 /// <reference path="webgpu.d.ts" />
 
+import Mat3 from './mat3.mjs';
 import Mat4 from './mat4.mjs';
 import Model from './model.mjs';
 
@@ -91,17 +92,19 @@ class ModelViewer extends HTMLElement {
       label: 'shader module',
       code: `
         struct Uniforms {
+          mv: mat4x4f,
           mvp: mat4x4f,
+          imv: mat3x3f,
         };
 
         struct VertexInput {
           @location(0) position: vec4f,
-          @location(1) normal: vec4f,
+          @location(1) normal: vec3f,
         };
 
         struct VertexOutput {
           @builtin(position) position: vec4f,
-          @location(0) normal: vec4f,
+          @location(0) normal: vec3f,
         }
 
         @group(0) @binding(0) var<uniform> uniforms: Uniforms;
@@ -110,13 +113,14 @@ class ModelViewer extends HTMLElement {
         fn vertexMain(vertexInput: VertexInput) -> VertexOutput {
           var vertexOutput: VertexOutput;
           vertexOutput.position = uniforms.mvp * vertexInput.position;
-          vertexOutput.normal = vertexInput.normal;
+          vertexOutput.normal = uniforms.imv * vertexInput.normal;
           return vertexOutput;
         }
 
         @fragment
         fn fragmentMain(vertexOutput: VertexOutput) -> @location(0) vec4f {
-          return vec4f(clamp(vertexOutput.normal.x, 0, 1), clamp(vertexOutput.normal.y, 0, 1), clamp(vertexOutput.normal.z, 0, 1), 1);
+          let normal = normalize(vertexOutput.normal);
+          return vec4f(abs(normal.x), abs(normal.y), abs(normal.z), 1);
         }
       `,
     });
@@ -160,8 +164,9 @@ class ModelViewer extends HTMLElement {
         format: 'depth24plus',
       },
     });
+
     // Set up uniforms buffer
-    const uniformsBufferSize = 16 * 4;
+    const uniformsBufferSize = (16 + 16 + 12) * 4;
     this.#uniformsBuffer = this.#device.createBuffer({
       label: 'uniforms buffer',
       size: uniformsBufferSize,
@@ -212,12 +217,12 @@ class ModelViewer extends HTMLElement {
   }
 
   render() {
-    const centerZ = this.#model.boundingBox.maxZ - this.#model.boundingBox.minZ;
+    const centerZ = this.#model.boundingBox.minZ * 15 - this.#model.boundingBox.maxZ * 15;
     const modelMatrix = Mat4.identity().scale(15, 15, 15);
     const viewMatrix = Mat4.identity()
       .rotateX(this.rotX)
       .rotateY(this.rotY)
-      .translate(0, centerZ / 2, this.zoom);
+      .translate(0, centerZ, this.zoom);
     const perspectiveMatrix = Mat4.identity().perspective(this.worldScale, this.worldScale);
     const orthographicProjection = Mat4.identity().orthographic(
       this.worldScale,
@@ -227,13 +232,24 @@ class ModelViewer extends HTMLElement {
       -this.worldScale,
       this.worldScale
     );
-    const projectionMatrix = Mat4.multiply(
+    const modelViewMatrix = Mat4.multiply(viewMatrix, modelMatrix);
+    const modelViewProjectionMatrix = Mat4.multiply(
       orthographicProjection,
-      Mat4.multiply(perspectiveMatrix, Mat4.multiply(viewMatrix, modelMatrix))
+      Mat4.multiply(perspectiveMatrix, modelViewMatrix)
     );
 
-    const projectionMatrixArray = new Float32Array(projectionMatrix.toArray());
-    this.#device.queue.writeBuffer(this.#uniformsBuffer, 0, projectionMatrixArray);
+    const subModelViewMatrix = new Mat3(
+      modelViewMatrix.r0c0, modelViewMatrix.r1c0, modelViewMatrix.r2c0,
+      modelViewMatrix.r0c1, modelViewMatrix.r1c1, modelViewMatrix.r2c1,
+      modelViewMatrix.r0c2, modelViewMatrix.r1c2, modelViewMatrix.r2c2
+    )
+
+    const uniformsArray = new Float32Array([
+      ...modelViewMatrix.toArray(),
+      ...modelViewProjectionMatrix.toArray(),
+      ...subModelViewMatrix.inverse().transpose().toArray(),
+    ]);
+    this.#device.queue.writeBuffer(this.#uniformsBuffer, 0, uniformsArray);
 
     const canvasTexture = this.#context.getCurrentTexture();
 
