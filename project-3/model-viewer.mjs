@@ -120,7 +120,11 @@ class ModelViewer extends HTMLElement {
         @fragment
         fn fragmentMain(vertexOutput: VertexOutput) -> @location(0) vec4f {
           let normal = normalize(vertexOutput.normal);
-          return vec4f(clamp(normal.x, 0, 1), clamp(normal.z, 0, 1), clamp(normal.y, 0, 1), 1);
+          let lightning = normalize(vec3f(10, 0, 0));
+          let color = vec3f(1, 0, 0);
+          let geoTerm = clamp(dot(normal, lightning), 0, 1);
+          let intensity = 0.8;
+          return vec4f(intensity * geoTerm * color, 1);
         }
       `,
     });
