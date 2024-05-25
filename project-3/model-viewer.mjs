@@ -37,7 +37,7 @@ class ModelViewer extends HTMLElement {
     this.#innerCanvas = /** @type {HTMLCanvasElement} */ (shadowRoot.querySelector('canvas'));
     this.#model = new Model();
     this.zoom = 500;
-    this.rotX = 90;
+    this.rotX = 0;
     this.rotY = 0;
     this.worldScale = this.#innerCanvas.clientWidth;
   }
@@ -113,14 +113,14 @@ class ModelViewer extends HTMLElement {
         fn vertexMain(vertexInput: VertexInput) -> VertexOutput {
           var vertexOutput: VertexOutput;
           vertexOutput.position = uniforms.mvp * vertexInput.position;
-          vertexOutput.normal = uniforms.imv * vertexInput.normal;
+          vertexOutput.normal = vertexInput.normal;
           return vertexOutput;
         }
 
         @fragment
         fn fragmentMain(vertexOutput: VertexOutput) -> @location(0) vec4f {
           let normal = normalize(vertexOutput.normal);
-          return vec4f(abs(normal.x), abs(normal.y), abs(normal.z), 1);
+          return vec4f(clamp(normal.x, 0, 1), clamp(normal.z, 0, 1), clamp(normal.y, 0, 1), 1);
         }
       `,
     });
@@ -217,12 +217,12 @@ class ModelViewer extends HTMLElement {
   }
 
   render() {
-    const centerZ = this.#model.boundingBox.minZ * 15 - this.#model.boundingBox.maxZ * 15;
-    const modelMatrix = Mat4.identity().scale(15, 15, 15);
+    const centerZ = (this.#model.boundingBox.minZ - this.#model.boundingBox.maxZ) / 2;
+    const modelMatrix = Mat4.identity().rotateX(90).translate(0, centerZ, 0).scale(15, 15, 15);
     const viewMatrix = Mat4.identity()
-      .rotateX(this.rotX)
       .rotateY(this.rotY)
-      .translate(0, centerZ, this.zoom);
+      .rotateX(this.rotX)
+      .translate(0, -60, this.zoom);
     const perspectiveMatrix = Mat4.identity().perspective(this.worldScale, this.worldScale);
     const orthographicProjection = Mat4.identity().orthographic(
       this.worldScale,
