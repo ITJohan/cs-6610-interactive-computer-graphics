@@ -124,7 +124,8 @@ class ModelViewer extends HTMLElement {
           let color = vec3f(1, 0, 0);
           let geoTerm = clamp(dot(normal, lightning), 0, 1);
           let intensity = 0.8;
-          return vec4f(intensity * geoTerm * color, 1);
+          let ambientLight = 0.15 * color;
+          return vec4f(intensity * geoTerm * color + ambientLight, 1);
         }
       `,
     });
