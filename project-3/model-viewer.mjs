@@ -71,7 +71,9 @@ class ModelViewer extends HTMLElement {
     });
 
     // Set up vertex buffer
-    this.#vertexArray = new Float32Array(Array.from(this.#model.vertexIndexToBufferDataMap.values()).flatMap(sub => sub));
+    this.#vertexArray = new Float32Array(
+      Array.from(this.#model.vertexIndexToBufferDataMap.values()).flatMap((sub) => sub)
+    );
     this.#vertexBuffer = this.#device.createBuffer({
       label: 'vertex buffer',
       size: this.#vertexArray.byteLength,
@@ -224,10 +226,7 @@ class ModelViewer extends HTMLElement {
   render() {
     const centerZ = (this.#model.boundingBox.minZ - this.#model.boundingBox.maxZ) / 2;
     const modelMatrix = Mat4.identity().rotateX(90).translate(0, centerZ, 0).scale(15, 15, 15);
-    const viewMatrix = Mat4.identity()
-      .rotateY(this.rotY)
-      .rotateX(this.rotX)
-      .translate(0, -60, this.zoom);
+    const viewMatrix = Mat4.identity().rotateY(this.rotY).rotateX(this.rotX).translate(0, -60, this.zoom);
     const perspectiveMatrix = Mat4.identity().perspective(this.worldScale, this.worldScale);
     const orthographicProjection = Mat4.identity().orthographic(
       this.worldScale,
@@ -244,10 +243,16 @@ class ModelViewer extends HTMLElement {
     );
 
     const subModelViewMatrix = new Mat3(
-      modelViewMatrix.r0c0, modelViewMatrix.r1c0, modelViewMatrix.r2c0,
-      modelViewMatrix.r0c1, modelViewMatrix.r1c1, modelViewMatrix.r2c1,
-      modelViewMatrix.r0c2, modelViewMatrix.r1c2, modelViewMatrix.r2c2
-    )
+      modelViewMatrix.r0c0,
+      modelViewMatrix.r1c0,
+      modelViewMatrix.r2c0,
+      modelViewMatrix.r0c1,
+      modelViewMatrix.r1c1,
+      modelViewMatrix.r2c1,
+      modelViewMatrix.r0c2,
+      modelViewMatrix.r1c2,
+      modelViewMatrix.r2c2
+    );
 
     const uniformsArray = new Float32Array([
       ...modelViewMatrix.toArray(),
