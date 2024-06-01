@@ -57,22 +57,22 @@ export default class Model {
         const z = Number(parsedLine[4]);
 
         if (x < this.boundingBox.minX) {
-          this.boundingBox.minX = x;
+          this.boundingBox.minX = x * this.scale[0];
         }
         if (x > this.boundingBox.maxX) {
-          this.boundingBox.maxX = x;
+          this.boundingBox.maxX = x * this.scale[0];
         }
         if (y < this.boundingBox.minY) {
-          this.boundingBox.minY = y;
+          this.boundingBox.minY = y * this.scale[1];
         }
         if (y > this.boundingBox.maxY) {
-          this.boundingBox.maxY = y;
+          this.boundingBox.maxY = y * this.scale[1];
         }
         if (z < this.boundingBox.minZ) {
-          this.boundingBox.minZ = z;
+          this.boundingBox.minZ = z * this.scale[2];
         }
         if (z > this.boundingBox.maxZ) {
-          this.boundingBox.maxZ = z;
+          this.boundingBox.maxZ = z * this.scale[2];
         }
 
         this.vertices.push([x, y, z]);
