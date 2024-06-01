@@ -1,4 +1,7 @@
 // @ts-check
+/// <reference path="./types.d.ts" />
+
+import Mat4 from './mat4.mjs';
 
 export default class Model {
   /** @type {[number, number, number][]} */ vertices;
@@ -16,13 +19,16 @@ export default class Model {
    * maxZ: number;
    * }}
    */ boundingBox;
+  /** @type {Vec3} */ position;
+  /** @type {Vec3} */ scale;
+  /** @type {Vec3} */ rotation;
 
-  constructor() {
+  constructor(/** @type {Vec3} */ position, /** @type {Vec3} */ scale, /** @type {Vec3} */ rotation) {
     this.vertices = [];
     this.vertexNormals = [];
     this.textureCoordinates = [];
     this.indices = [];
-    this.vertexIndexToBufferDataMap = new Map()
+    this.vertexIndexToBufferDataMap = new Map();
     this.boundingBox = {
       minX: 0,
       maxX: 0,
@@ -31,6 +37,9 @@ export default class Model {
       minZ: 0,
       maxZ: 0,
     };
+    this.position = position;
+    this.scale = scale;
+    this.rotation = rotation;
   }
 
   async load(/** @type {string} */ src) {
@@ -66,7 +75,7 @@ export default class Model {
           this.boundingBox.maxZ = z;
         }
 
-        this.vertices.push([ x, y, z ]);
+        this.vertices.push([x, y, z]);
         return;
       }
 
@@ -75,7 +84,7 @@ export default class Model {
         const x = Number(parsedLine[1]);
         const y = Number(parsedLine[2]);
         const z = Number(parsedLine[3]);
-        this.vertexNormals.push([ x, y, z ]);
+        this.vertexNormals.push([x, y, z]);
         return;
       }
 
@@ -84,7 +93,7 @@ export default class Model {
         const x = Number(parsedLine[1]);
         const y = Number(parsedLine[2]);
         const z = Number(parsedLine[3]);
-        this.textureCoordinates.push([ x, y, z ]);
+        this.textureCoordinates.push([x, y, z]);
         return;
       }
 
@@ -93,33 +102,46 @@ export default class Model {
 
         parsedLine.forEach((key, keyIndex) => {
           if (key === '' || keyIndex === 0) return;
-          
+
           if (this.vertexIndexToBufferDataMap.has(key) === false) {
             const [vertexIndex, textureIndex, normalIndex] = key.split('/').map((index) => Number(index) - 1);
-            
-            const vertexData = this.vertices[vertexIndex]
-            const normalData = this.vertexNormals[normalIndex]
-            
-            this.vertexIndexToBufferDataMap.set(key, [...vertexData, ...normalData])
+
+            const vertexData = this.vertices[vertexIndex];
+            const normalData = this.vertexNormals[normalIndex];
+
+            this.vertexIndexToBufferDataMap.set(key, [...vertexData, ...normalData]);
           }
-          
+
           let vertexIndex = 0;
 
           for (const [mapKey] of this.vertexIndexToBufferDataMap) {
             if (mapKey === key) {
               if (keyIndex === 4) {
-                this.indices.push(this.indices[this.indices.length - 3], this.indices[this.indices.length - 1], vertexIndex)
+                this.indices.push(
+                  this.indices[this.indices.length - 3],
+                  this.indices[this.indices.length - 1],
+                  vertexIndex
+                );
               } else {
-                this.indices.push(vertexIndex)
+                this.indices.push(vertexIndex);
               }
             }
 
             vertexIndex++;
           }
-        })
+        });
 
         return;
       }
     });
+  }
+
+  getModelMatrix() {
+    return Mat4.identity()
+      .rotateX(this.rotation[0])
+      .rotateY(this.rotation[1])
+      .rotateZ(this.rotation[2])
+      .translate(this.position[0], this.position[1], this.position[2])
+      .scale(this.scale[0], this.scale[1], this.scale[2]);
   }
 }

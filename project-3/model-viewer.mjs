@@ -27,18 +27,14 @@ class ModelViewer extends HTMLElement {
   /** @type {number} */ worldScale;
   /** @type {number} */ zoom;
   /** @type {boolean} */ mousePressed;
-  /** @type {number} */ rotX;
-  /** @type {number} */ rotY;
 
   constructor() {
     super();
     const shadowRoot = this.attachShadow({ mode: 'open' });
     shadowRoot.appendChild(template.content.cloneNode(true));
     this.#innerCanvas = /** @type {HTMLCanvasElement} */ (shadowRoot.querySelector('canvas'));
-    this.#model = new Model();
+    this.#model = new Model([0, 0, 0], [15, 15, 15], [90, 0, 0]);
     this.zoom = 500;
-    this.rotX = 0;
-    this.rotY = 0;
     this.worldScale = this.#innerCanvas.clientWidth;
   }
 
@@ -191,6 +187,8 @@ class ModelViewer extends HTMLElement {
       ],
     });
 
+    this.#model.position = [0, (this.#model.boundingBox.minZ - this.#model.boundingBox.maxZ) / 2, 0];
+
     this.render();
 
     this.#innerCanvas.addEventListener('wheel', (e) => {
@@ -203,8 +201,8 @@ class ModelViewer extends HTMLElement {
     this.#innerCanvas.addEventListener('mousemove', (e) => {
       if (!this.mousePressed) return;
 
-      this.rotX += e.movementY;
-      this.rotY += e.movementX;
+      this.#model.rotation[0] += e.movementY;
+      this.#model.rotation[1] += e.movementX;
 
       this.render();
     });
@@ -224,9 +222,7 @@ class ModelViewer extends HTMLElement {
   }
 
   render() {
-    const centerZ = (this.#model.boundingBox.minZ - this.#model.boundingBox.maxZ) / 2;
-    const modelMatrix = Mat4.identity().rotateX(90).translate(0, centerZ, 0).scale(15, 15, 15);
-    const viewMatrix = Mat4.identity().rotateY(this.rotY).rotateX(this.rotX).translate(0, -60, this.zoom);
+    const viewMatrix = Mat4.identity().translate(0, -60, this.zoom);
     const perspectiveMatrix = Mat4.identity().perspective(this.worldScale, this.worldScale);
     const orthographicProjection = Mat4.identity().orthographic(
       this.worldScale,
@@ -236,7 +232,7 @@ class ModelViewer extends HTMLElement {
       -this.worldScale,
       this.worldScale
     );
-    const modelViewMatrix = Mat4.multiply(viewMatrix, modelMatrix);
+    const modelViewMatrix = Mat4.multiply(viewMatrix, this.#model.getModelMatrix());
     const modelViewProjectionMatrix = Mat4.multiply(
       orthographicProjection,
       Mat4.multiply(perspectiveMatrix, modelViewMatrix)
