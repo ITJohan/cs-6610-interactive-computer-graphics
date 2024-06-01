@@ -24,8 +24,8 @@ class ModelViewer extends HTMLElement {
   /** @type {GPUBindGroup} */ #bindGroup;
   /** @type {HTMLCanvasElement} */ #innerCanvas;
   /** @type {Model} */ #model;
+  /** @type {Model} */ #camera;
   /** @type {number} */ worldScale;
-  /** @type {number} */ zoom;
   /** @type {boolean} */ mousePressed;
 
   constructor() {
@@ -34,7 +34,7 @@ class ModelViewer extends HTMLElement {
     shadowRoot.appendChild(template.content.cloneNode(true));
     this.#innerCanvas = /** @type {HTMLCanvasElement} */ (shadowRoot.querySelector('canvas'));
     this.#model = new Model([0, 0, 0], [15, 15, 15], [90, 0, 0]);
-    this.zoom = 500;
+    this.#camera = new Model([0, -100, 500], [1, 1, 1], [0, 0, 0]);
     this.worldScale = this.#innerCanvas.clientWidth;
   }
 
@@ -192,7 +192,7 @@ class ModelViewer extends HTMLElement {
     this.render();
 
     this.#innerCanvas.addEventListener('wheel', (e) => {
-      this.zoom += e.deltaY;
+      this.#camera.position[2] += e.deltaY;
 
       this.render();
     });
@@ -222,7 +222,6 @@ class ModelViewer extends HTMLElement {
   }
 
   render() {
-    const viewMatrix = Mat4.identity().translate(0, -60, this.zoom);
     const perspectiveMatrix = Mat4.identity().perspective(this.worldScale, this.worldScale);
     const orthographicProjection = Mat4.identity().orthographic(
       this.worldScale,
@@ -232,7 +231,7 @@ class ModelViewer extends HTMLElement {
       -this.worldScale,
       this.worldScale
     );
-    const modelViewMatrix = Mat4.multiply(viewMatrix, this.#model.getModelMatrix());
+    const modelViewMatrix = Mat4.multiply(this.#camera.getModelMatrix(), this.#model.getModelMatrix());
     const modelViewProjectionMatrix = Mat4.multiply(
       orthographicProjection,
       Mat4.multiply(perspectiveMatrix, modelViewMatrix)

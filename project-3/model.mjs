@@ -138,10 +138,10 @@ export default class Model {
 
   getModelMatrix() {
     return Mat4.identity()
+      .scale(this.scale[0], this.scale[1], this.scale[2])
       .rotateX(this.rotation[0])
       .rotateY(this.rotation[1])
       .rotateZ(this.rotation[2])
-      .translate(this.position[0], this.position[1], this.position[2])
-      .scale(this.scale[0], this.scale[1], this.scale[2]);
+      .translate(this.position[0], this.position[1], this.position[2]);
   }
 }
