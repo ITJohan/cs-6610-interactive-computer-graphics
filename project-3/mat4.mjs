@@ -125,20 +125,19 @@ export default class Mat4 {
     projectionMatrix.r0c0 = 2 / (right - left);
     projectionMatrix.r1c1 = 2 / (top - bottom);
     projectionMatrix.r2c2 = 1 / (far - near);
-    projectionMatrix.r0c3 = (-2 * left) / (right - left) - 1;
-    projectionMatrix.r1c3 = (-2 * bottom) / (top - bottom) - 1;
-    projectionMatrix.r2c3 = (-1 * near) / (far - near) - 0.5;
+    projectionMatrix.r0c3 = -(right + left) / (right - left);
+    projectionMatrix.r1c3 = -(top + bottom) / (top - bottom);
+    projectionMatrix.r2c3 = -near / (far - near);
 
     return Mat4.multiply(projectionMatrix, this);
   }
 
-  // TODO: center object using bounding box
   perspective(/** @type {number} */ near, /** @type {number} */ far) {
     const projectionMatrix = Mat4.identity();
     projectionMatrix.r0c0 = near;
     projectionMatrix.r1c1 = near;
     projectionMatrix.r2c2 = near + far;
-    projectionMatrix.r2c3 = -near * far;
+    projectionMatrix.r2c3 = -far * near;
     projectionMatrix.r3c2 = 1;
 
     return Mat4.multiply(projectionMatrix, this);
@@ -166,55 +165,114 @@ export default class Mat4 {
   }
 
   inverse() {
-    const det = (
-      /** @type {number} */ row,
-      /** @type {number} */ col,
-      /** @type {number[]} */ mat) => {
-        const subMat = mat.filter((_, index) => index % 4 !== row && Math.floor(index / 4) !== col)
-        return subMat[0] * (subMat[4] * subMat[8] - subMat[7] * subMat[5]) -
-              subMat[3] * (subMat[1] * subMat[8] - subMat[7] * subMat[2]) +
-              subMat[6] * (subMat[1] * subMat[5] - subMat[4] * subMat[3]);
-      }
+    const det = (/** @type {number} */ row, /** @type {number} */ col, /** @type {number[]} */ mat) => {
+      const subMat = mat.filter((_, index) => index % 4 !== row && Math.floor(index / 4) !== col);
+      return (
+        subMat[0] * (subMat[4] * subMat[8] - subMat[7] * subMat[5]) -
+        subMat[3] * (subMat[1] * subMat[8] - subMat[7] * subMat[2]) +
+        subMat[6] * (subMat[1] * subMat[5] - subMat[4] * subMat[3])
+      );
+    };
 
     const mat = this.toArray();
 
     const matrixOfMinors = [
-      det(0, 0, mat), det(1, 0, mat), det(2, 0, mat), det(3, 0, mat),
-      det(0, 1, mat), det(1, 1, mat), det(2, 1, mat), det(3, 1, mat),
-      det(0, 2, mat), det(1, 2, mat), det(2, 2, mat), det(3, 2, mat),
-      det(0, 3, mat), det(1, 3, mat), det(2, 3, mat), det(3, 3, mat),
-    ]
+      det(0, 0, mat),
+      det(1, 0, mat),
+      det(2, 0, mat),
+      det(3, 0, mat),
+      det(0, 1, mat),
+      det(1, 1, mat),
+      det(2, 1, mat),
+      det(3, 1, mat),
+      det(0, 2, mat),
+      det(1, 2, mat),
+      det(2, 2, mat),
+      det(3, 2, mat),
+      det(0, 3, mat),
+      det(1, 3, mat),
+      det(2, 3, mat),
+      det(3, 3, mat),
+    ];
 
     const matrixOfCofactors = [
-      matrixOfMinors[0], -1 * matrixOfMinors[1], matrixOfMinors[2], -1 * matrixOfMinors[3],
-      -1 * matrixOfMinors[4], matrixOfMinors[5], -1 * matrixOfMinors[6], matrixOfMinors[7],
-      matrixOfMinors[8], -1 * matrixOfMinors[9], matrixOfMinors[10], -1 * matrixOfMinors[11],
-      -1 * matrixOfMinors[12], matrixOfMinors[13], -1 * matrixOfMinors[14], matrixOfMinors[15],
-    ]
+      matrixOfMinors[0],
+      -1 * matrixOfMinors[1],
+      matrixOfMinors[2],
+      -1 * matrixOfMinors[3],
+      -1 * matrixOfMinors[4],
+      matrixOfMinors[5],
+      -1 * matrixOfMinors[6],
+      matrixOfMinors[7],
+      matrixOfMinors[8],
+      -1 * matrixOfMinors[9],
+      matrixOfMinors[10],
+      -1 * matrixOfMinors[11],
+      -1 * matrixOfMinors[12],
+      matrixOfMinors[13],
+      -1 * matrixOfMinors[14],
+      matrixOfMinors[15],
+    ];
 
     const matrixOfAdjugate = [
-      matrixOfCofactors[0], matrixOfCofactors[4], matrixOfCofactors[8], matrixOfCofactors[12],
-      matrixOfCofactors[1], matrixOfCofactors[5], matrixOfCofactors[9], matrixOfCofactors[13],
-      matrixOfCofactors[2], matrixOfCofactors[6], matrixOfCofactors[10], matrixOfCofactors[14],
-      matrixOfCofactors[3], matrixOfCofactors[7], matrixOfCofactors[11], matrixOfCofactors[15]
-    ]
+      matrixOfCofactors[0],
+      matrixOfCofactors[4],
+      matrixOfCofactors[8],
+      matrixOfCofactors[12],
+      matrixOfCofactors[1],
+      matrixOfCofactors[5],
+      matrixOfCofactors[9],
+      matrixOfCofactors[13],
+      matrixOfCofactors[2],
+      matrixOfCofactors[6],
+      matrixOfCofactors[10],
+      matrixOfCofactors[14],
+      matrixOfCofactors[3],
+      matrixOfCofactors[7],
+      matrixOfCofactors[11],
+      matrixOfCofactors[15],
+    ];
 
     const determinant = mat[0] * matrixOfMinors[0] - mat[4] * matrixOfMinors[4] + mat[8] * matrixOfMinors[8];
 
     return new Mat4(
-      matrixOfAdjugate[0] / determinant, matrixOfAdjugate[1] / determinant, matrixOfAdjugate[2] / determinant, matrixOfAdjugate[3] / determinant,
-      matrixOfAdjugate[4] / determinant, matrixOfAdjugate[5] / determinant, matrixOfAdjugate[6] / determinant, matrixOfAdjugate[7] / determinant,
-      matrixOfAdjugate[8] / determinant, matrixOfAdjugate[9] / determinant, matrixOfAdjugate[10] / determinant, matrixOfAdjugate[11] / determinant,
-      matrixOfAdjugate[12] / determinant, matrixOfAdjugate[13] / determinant, matrixOfAdjugate[14] / determinant, matrixOfAdjugate[15] / determinant,
-    )
+      matrixOfAdjugate[0] / determinant,
+      matrixOfAdjugate[1] / determinant,
+      matrixOfAdjugate[2] / determinant,
+      matrixOfAdjugate[3] / determinant,
+      matrixOfAdjugate[4] / determinant,
+      matrixOfAdjugate[5] / determinant,
+      matrixOfAdjugate[6] / determinant,
+      matrixOfAdjugate[7] / determinant,
+      matrixOfAdjugate[8] / determinant,
+      matrixOfAdjugate[9] / determinant,
+      matrixOfAdjugate[10] / determinant,
+      matrixOfAdjugate[11] / determinant,
+      matrixOfAdjugate[12] / determinant,
+      matrixOfAdjugate[13] / determinant,
+      matrixOfAdjugate[14] / determinant,
+      matrixOfAdjugate[15] / determinant
+    );
   }
 
   transpose() {
     return new Mat4(
-      this.r0c0, this.r0c1, this.r0c2, this.r0c3,
-      this.r1c0, this.r1c1, this.r1c2, this.r1c3,
-      this.r2c0, this.r2c1, this.r2c2, this.r2c3,
-      this.r3c0, this.r3c1, this.r3c2, this.r3c3
-    )
+      this.r0c0,
+      this.r0c1,
+      this.r0c2,
+      this.r0c3,
+      this.r1c0,
+      this.r1c1,
+      this.r1c2,
+      this.r1c3,
+      this.r2c0,
+      this.r2c1,
+      this.r2c2,
+      this.r2c3,
+      this.r3c0,
+      this.r3c1,
+      this.r3c2,
+      this.r3c3
+    );
   }
 }
