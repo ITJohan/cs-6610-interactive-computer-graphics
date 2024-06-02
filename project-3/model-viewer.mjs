@@ -187,7 +187,7 @@ class ModelViewer extends HTMLElement {
       ],
     });
 
-    this.#model.position = [0, (this.#model.boundingBox.minZ - this.#model.boundingBox.maxZ) / 2, 0];
+    this.#model.position[1] = (this.#model.boundingBox.minZ - this.#model.boundingBox.maxZ) / 2;
 
     this.render();
 
@@ -222,13 +222,13 @@ class ModelViewer extends HTMLElement {
   }
 
   render() {
-    const perspectiveMatrix = Mat4.identity().perspective(this.worldScale, this.worldScale);
+    const perspectiveMatrix = Mat4.identity().perspective(this.worldScale - 100, this.worldScale);
     const orthographicProjection = Mat4.identity().orthographic(
       this.worldScale,
       -this.worldScale,
       -this.worldScale,
       this.worldScale,
-      -this.worldScale,
+      0,
       this.worldScale
     );
     const modelViewMatrix = Mat4.multiply(this.#camera.getModelMatrix(), this.#model.getModelMatrix());
