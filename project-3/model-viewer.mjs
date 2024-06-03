@@ -25,6 +25,7 @@ class ModelViewer extends HTMLElement {
   /** @type {HTMLCanvasElement} */ #innerCanvas;
   /** @type {Model} */ #model;
   /** @type {Model} */ #camera;
+  /** @type {Model} */ #light;
   /** @type {number} */ worldScale;
   /** @type {boolean} */ mousePressed;
 
@@ -35,6 +36,7 @@ class ModelViewer extends HTMLElement {
     this.#innerCanvas = /** @type {HTMLCanvasElement} */ (shadowRoot.querySelector('canvas'));
     this.#model = new Model([0, 0, 0], [15, 15, 15], [90, 0, 0]);
     this.#camera = new Model([0, -100, 500], [1, 1, 1], [0, 0, 0]);
+    this.#light = new Model([100, 50, 50], [1, 1, 1], [0, 0, 0]);
     this.worldScale = this.#innerCanvas.clientWidth;
   }
 
@@ -93,6 +95,7 @@ class ModelViewer extends HTMLElement {
           mv: mat4x4f,
           mvp: mat4x4f,
           imv: mat3x3f,
+          light: vec3f,
         };
 
         struct VertexInput {
@@ -118,9 +121,9 @@ class ModelViewer extends HTMLElement {
         @fragment
         fn fragmentMain(vertexOutput: VertexOutput) -> @location(0) vec4f {
           let normal = normalize(vertexOutput.normal);
-          let lightning = normalize(vec3f(10, 0, 0));
+          let light = normalize(uniforms.light);
           let color = vec3f(1, 0, 0);
-          let geoTerm = clamp(dot(normal, lightning), 0, 1);
+          let geoTerm = clamp(dot(normal, light), 0, 1);
           let intensity = 0.8;
           let ambientLight = 0.15 * color;
           return vec4f(intensity * geoTerm * color + ambientLight, 1);
@@ -169,10 +172,9 @@ class ModelViewer extends HTMLElement {
     });
 
     // Set up uniforms buffer
-    const uniformsBufferSize = (16 + 16 + 12) * 4;
     this.#uniformsBuffer = this.#device.createBuffer({
       label: 'uniforms buffer',
-      size: uniformsBufferSize,
+      size: 192,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
@@ -249,12 +251,20 @@ class ModelViewer extends HTMLElement {
       modelViewMatrix.r2c2
     );
 
-    const uniformsArray = new Float32Array([
-      ...modelViewMatrix.toArray(),
-      ...modelViewProjectionMatrix.toArray(),
-      ...subModelViewMatrix.inverse().transpose().toArray(),
-    ]);
-    this.#device.queue.writeBuffer(this.#uniformsBuffer, 0, uniformsArray);
+    const uniformsArrayBuffer = new ArrayBuffer(192);
+    const uniformsViews = {
+      mv: new Float32Array(uniformsArrayBuffer, 0, 16),
+      mvp: new Float32Array(uniformsArrayBuffer, 64, 16),
+      imv: new Float32Array(uniformsArrayBuffer, 128, 12),
+      light: new Float32Array(uniformsArrayBuffer, 176, 3),
+    };
+
+    uniformsViews.mv.set(modelViewMatrix.toArray());
+    uniformsViews.mvp.set(modelViewProjectionMatrix.toArray());
+    uniformsViews.imv.set(subModelViewMatrix.inverse().transpose().toArray());
+    uniformsViews.light.set(this.#light.position);
+
+    this.#device.queue.writeBuffer(this.#uniformsBuffer, 0, uniformsArrayBuffer);
 
     const canvasTexture = this.#context.getCurrentTexture();
 
