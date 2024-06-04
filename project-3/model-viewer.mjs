@@ -114,7 +114,7 @@ class ModelViewer extends HTMLElement {
         fn vertexMain(vertexInput: VertexInput) -> VertexOutput {
           var vertexOutput: VertexOutput;
           vertexOutput.position = uniforms.mvp * vertexInput.position;
-          vertexOutput.normal = vertexInput.normal;
+          vertexOutput.normal = uniforms.imv * vertexInput.normal;
           return vertexOutput;
         }
 
@@ -259,9 +259,12 @@ class ModelViewer extends HTMLElement {
       light: new Float32Array(uniformsArrayBuffer, 176, 3),
     };
 
+    const subModelViewMatrixArray = subModelViewMatrix.inverse().transpose().toArray();
+    subModelViewMatrixArray.splice(3, 0, 0).splice(7, 0, 0).splice(11, 0, 0);
+
     uniformsViews.mv.set(modelViewMatrix.toArray());
     uniformsViews.mvp.set(modelViewProjectionMatrix.toArray());
-    uniformsViews.imv.set(subModelViewMatrix.inverse().transpose().toArray());
+    uniformsViews.imv.set(subModelViewMatrixArray);
     uniformsViews.light.set(this.#light.position);
 
     this.#device.queue.writeBuffer(this.#uniformsBuffer, 0, uniformsArrayBuffer);
