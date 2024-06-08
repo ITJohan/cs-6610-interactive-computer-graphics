@@ -36,7 +36,7 @@ class ModelViewer extends HTMLElement {
     this.#innerCanvas = /** @type {HTMLCanvasElement} */ (shadowRoot.querySelector('canvas'));
     this.#model = new Model([0, 0, 0], [15, 15, 15], [90, 0, 0]);
     this.#camera = new Model([0, -100, 500], [1, 1, 1], [0, 0, 0]);
-    this.#light = new Model([100, 50, 50], [1, 1, 1], [0, 0, 0]);
+    this.#light = new Model([100, 100, -100], [1, 1, 1], [0, 0, 0]);
     this.worldScale = this.#innerCanvas.clientWidth;
   }
 
@@ -115,18 +115,30 @@ class ModelViewer extends HTMLElement {
           var vertexOutput: VertexOutput;
           vertexOutput.position = uniforms.mvp * vertexInput.position;
           vertexOutput.normal = uniforms.imv * vertexInput.normal;
+
           return vertexOutput;
         }
 
         @fragment
         fn fragmentMain(vertexOutput: VertexOutput) -> @location(0) vec4f {
           let normal = normalize(vertexOutput.normal);
+          let camera = -1.0 * normalize(vertexOutput.position.xyz);
           let light = normalize(uniforms.light);
-          let color = vec3f(1, 0, 0);
-          let geoTerm = clamp(dot(normal, light), 0, 1);
+          
           let intensity = 0.8;
-          let ambientLight = 0.15 * color;
-          return vec4f(intensity * geoTerm * color + ambientLight, 1);
+          let diffuseColor = vec3f(1, 0, 0);
+          let geoTerm = max(0, dot(normal, light));
+          
+          let shininess = 100.0;
+          let specularColor = vec3f(1, 1, 1);
+          let r = 2.0 * dot(light, normal) * normal - light;
+          let phongTerm = max(0, dot(r, camera));
+
+          let ambientLight = 0.15 * diffuseColor;
+
+          let color = intensity * geoTerm * (diffuseColor + specularColor * pow(phongTerm, shininess) / geoTerm) + ambientLight;
+
+          return vec4f(color, 1);
         }
       `,
     });
@@ -231,7 +243,7 @@ class ModelViewer extends HTMLElement {
       -this.worldScale,
       this.worldScale,
       0,
-      this.worldScale
+      this.worldScale * 2
     );
     const modelViewMatrix = Mat4.multiply(this.#camera.getModelMatrix(), this.#model.getModelMatrix());
     const modelViewProjectionMatrix = Mat4.multiply(
