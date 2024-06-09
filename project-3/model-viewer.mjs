@@ -88,6 +88,7 @@ class ModelViewer extends HTMLElement {
     });
     this.#device.queue.writeBuffer(this.#indexBuffer, 0, this.#indexArray);
 
+    // TODO: normal matrix is wrong somehow. Read and reimplement following https://webgpufundamentals.org/webgpu/lessons/webgpu-fundamentals.html.
     const shaderModule = this.#device.createShaderModule({
       label: 'shader module',
       code: `
@@ -129,7 +130,7 @@ class ModelViewer extends HTMLElement {
           let diffuseColor = vec3f(1, 0, 0);
           let geoTerm = max(0, dot(normal, light));
           
-          let shininess = 100.0;
+          let shininess = 10000.0;
           let specularColor = vec3f(1, 1, 1);
           let r = 2.0 * dot(light, normal) * normal - light;
           let phongTerm = max(0, dot(r, camera));
@@ -138,7 +139,7 @@ class ModelViewer extends HTMLElement {
 
           let color = intensity * geoTerm * (diffuseColor + specularColor * pow(phongTerm, shininess) / geoTerm) + ambientLight;
 
-          return vec4f(color, 1);
+          return vec4f(normal, 1);
         }
       `,
     });
